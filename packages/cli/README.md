@@ -34,24 +34,25 @@ environment variables instead.
 ## Options
 
 ```
-unpii <datei> [optionen]
-unpii [optionen] < eingabe
-unpii restore --from <antwort.json> [antwort-datei]
+unpii <file> [options]
+unpii [options] < input
+unpii restore --from <response.json> [answer-file]
 
-Optionen:
-  --out <pfad>       Ergebnis in eine Datei schreiben statt nach stdout
-  --scan             nur die gefundenen Spans als Tabelle, ohne den Text
-  --json             die volle API-Antwort unveraendert ausgeben (fuer restore)
+Options:
+  --out <path>       write the result to a file instead of stdout
+  --scan             only the found spans as a table, without the text
+  --json             print the full API response unchanged (for restore)
   --marker <format>  default | custom | xxxxx | blackbar
-  --keep <a,b,...>   Kategorien kommagetrennt von der Schwaerzung ausnehmen
-  --from <pfad>      (nur bei restore) eine gespeicherte --json-Antwort
-  --help             diese Hilfe
-  --version          Versionsnummer
+  --keep <a,b,...>   comma-separated categories to exclude from redaction
+                     (the current server still ignores this option)
+  --from <path>      (restore only) a saved --json response
+  --help             this help
+  --version          version number
 
-Umgebungsvariablen:
-  UNPII_API_KEY       API-Key
-  UNPII_API_KEY_FILE  Datei mit dem API-Key (wird getrimmt gelesen)
-  UNPII_BASE_URL      Basis-URL, Default https://unpii.me
+Environment variables:
+  UNPII_API_KEY       API key
+  UNPII_API_KEY_FILE  file containing the API key (read trimmed)
+  UNPII_BASE_URL      base URL, default https://unpii.me
 ```
 
 Without a path, input is read from stdin. The file type is detected from both the extension and
@@ -63,9 +64,9 @@ examples.
 ## Exit codes
 
 ```
-0  Erfolg
-1  API- oder Laufzeitfehler
-2  Aufruffehler oder fehlender Key
+0  success
+1  API or runtime error
+2  usage error or missing key
 ```
 
 ## Translating back

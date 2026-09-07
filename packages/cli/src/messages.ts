@@ -196,6 +196,7 @@ Optionen:
   --json             die volle API-Antwort unveraendert ausgeben (fuer restore)
   --marker <format>  default | custom | xxxxx | blackbar
   --keep <a,b,...>   Kategorien kommagetrennt von der Schwaerzung ausnehmen
+                     (der aktuelle Server ignoriert diese Option noch)
   --from <pfad>      (nur bei restore) eine gespeicherte --json-Antwort
   --help             diese Hilfe
   --version          Versionsnummer
@@ -236,6 +237,7 @@ Options:
   --json             print the full API response unchanged (for restore)
   --marker <format>  default | custom | xxxxx | blackbar
   --keep <a,b,...>   comma-separated categories to exclude from redaction
+                     (the current server still ignores this option)
   --from <path>      (restore only) a saved --json response
   --help             this help
   --version          version number
