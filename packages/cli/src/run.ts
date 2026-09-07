@@ -13,6 +13,7 @@ import {
 } from "@unpii/sdk";
 import type { ParsedArgs, RestoreArgs, RunArgs } from "./args.js";
 import {
+  type Lang,
   answerReadFailedMessage,
   apiErrorMessage,
   fromReadFailedMessage,
@@ -25,9 +26,11 @@ import {
   noApiKeyMessage,
   outRequiredForDocumentMessage,
   rateLimitSentence,
+  resolveLang,
   restoreNeedsFromMessage,
   restoreSummary,
   scanNotAvailableMessage,
+  scanStatusLabel,
 } from "./messages.js";
 
 /**
@@ -164,10 +167,13 @@ interface SpanTableRow {
  * of `--scan`: show what would be found without reprinting the PII itself. Both `spans` and
  * `uncertainSpans` are included (a low-confidence span is signal, never silently dropped —
  * Charter §4). */
-export function renderScanTable(res: {
-  spans: Span[];
-  uncertainSpans: Span[];
-}): string {
+export function renderScanTable(
+  res: {
+    spans: Span[];
+    uncertainSpans: Span[];
+  },
+  lang: Lang = resolveLang(process.env),
+): string {
   const rows: SpanTableRow[] = [
     ...res.spans.map((s) => toRow(s, false)),
     ...res.uncertainSpans.map((s) => toRow(s, true)),
@@ -179,7 +185,7 @@ export function renderScanTable(res: {
     String(r.start),
     String(r.end),
     r.score !== undefined ? r.score.toFixed(2) : "-",
-    r.uncertain ? "unsicher" : "sicher",
+    scanStatusLabel(r.uncertain, lang),
   ]);
   return `${tabulate(headers, cells)}\n`;
 }
