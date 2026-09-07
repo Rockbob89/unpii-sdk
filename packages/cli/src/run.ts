@@ -13,11 +13,19 @@ import {
 } from "@unpii/sdk";
 import type { ParsedArgs, RestoreArgs, RunArgs } from "./args.js";
 import {
+  answerReadFailedMessage,
   apiErrorMessage,
+  fromReadFailedMessage,
+  genericErrorMessage,
   helpText,
+  inputReadFailedMessage,
+  invalidJsonMessage,
+  invalidResponseMessage,
+  missingSpansArrayMessage,
   noApiKeyMessage,
   outRequiredForDocumentMessage,
   rateLimitSentence,
+  restoreNeedsFromMessage,
   restoreSummary,
   scanNotAvailableMessage,
 } from "./messages.js";
@@ -206,22 +214,35 @@ async function runRestore(args: RestoreArgs, io: RunIO): Promise<number> {
   if (from === undefined) {
     // Guarded by args.ts already (ArgsError when !help && from === undefined); reachable only if
     // that invariant is ever broken, so this is a defensive fallback, not a normal path.
-    await write(io.stderr, "restore braucht --from <pfad>.\n");
+    await write(io.stderr, `${restoreNeedsFromMessage()}\n`);
     return 2;
+  }
+
+  let raw: string;
+  try {
+    raw = await readFile(from, "utf8");
+  } catch (err) {
+    // An fs error here describes the path, never the file's content — safe to forward verbatim.
+    const message = err instanceof Error ? err.message : String(err);
+    await write(io.stderr, fromReadFailedMessage(message));
+    return 1;
   }
 
   let spans: Span[];
   try {
-    const raw = await readFile(from, "utf8");
     const parsed: unknown = JSON.parse(raw);
     const maybeSpans = (parsed as { spans?: unknown }).spans;
     if (!Array.isArray(maybeSpans)) {
-      throw new Error("Datei enthaelt kein 'spans'-Array.");
+      await write(io.stderr, fromReadFailedMessage(missingSpansArrayMessage()));
+      return 1;
     }
     spans = maybeSpans as Span[];
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    await write(io.stderr, `--from konnte nicht gelesen werden: ${message}\n`);
+  } catch {
+    // JSON.parse's own SyntaxError can quote a fragment of the malformed text in its message —
+    // see invalidJsonMessage's doc comment in messages.ts. This file's spans carry their
+    // `original` PII values, so that fragment is never forwarded; a static sentence goes out
+    // instead.
+    await write(io.stderr, fromReadFailedMessage(invalidJsonMessage()));
     return 1;
   }
 
@@ -233,7 +254,7 @@ async function runRestore(args: RestoreArgs, io: RunIO): Promise<number> {
         : (await readStdin(io.stdin)).toString("utf8");
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    await write(io.stderr, `Antwort konnte nicht gelesen werden: ${message}\n`);
+    await write(io.stderr, answerReadFailedMessage(message));
     return 1;
   }
 
@@ -260,7 +281,7 @@ async function runMain(args: RunArgs, env: NodeJS.ProcessEnv, io: RunIO): Promis
     bytes = args.path !== undefined ? await readFile(args.path) : await readStdin(io.stdin);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    await write(io.stderr, `Eingabe konnte nicht gelesen werden: ${message}\n`);
+    await write(io.stderr, inputReadFailedMessage(message));
     return 1;
   }
 
@@ -346,8 +367,17 @@ async function runMain(args: RunArgs, env: NodeJS.ProcessEnv, io: RunIO): Promis
       await write(io.stderr, apiErrorMessage(err));
       return 1;
     }
+    if (err instanceof SyntaxError) {
+      // res.json() (the SDK's undici-based fetch) throws SyntaxError when the response body
+      // isn't valid JSON, and that error's own message can quote a fragment of the body
+      // (measured against a real undici fetch) — a --json response's spans carry their
+      // `original` PII values, so it is never forwarded. See invalidResponseMessage's doc
+      // comment in messages.ts.
+      await write(io.stderr, invalidResponseMessage());
+      return 1;
+    }
     const message = err instanceof Error ? err.message : String(err);
-    await write(io.stderr, `Fehler: ${message}\n`);
+    await write(io.stderr, genericErrorMessage(message));
     return 1;
   }
 }

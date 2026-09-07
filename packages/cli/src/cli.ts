@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { ArgsError, parseArgs } from "./args.js";
+import { invalidResponseMessage, unexpectedErrorMessage } from "./messages.js";
 import { type RunIO, runCli } from "./run.js";
 
 /**
@@ -23,11 +24,17 @@ async function main(): Promise<number> {
       process.stderr.write(`${err.message}\n`);
       return 2;
     }
-    // Last-resort: runCli() catches everything it expects to see (UnpiiError, fs errors), so
-    // reaching here means something unanticipated broke. Still no input/body text to leak — this
-    // is a JS error message from our own code, not a caught API or filesystem error.
+    // Last-resort: runCli() catches everything it expects to see (UnpiiError, fs errors, and the
+    // response-body SyntaxError case — run.ts), so reaching here means something unanticipated
+    // broke. Same SyntaxError carve-out as run.ts's catch, as defense in depth: nothing below
+    // main() should let a raw JSON-parse error's message (which can quote parsed content) reach
+    // this far, but if one ever does, it is still not forwarded.
+    if (err instanceof SyntaxError) {
+      process.stderr.write(invalidResponseMessage());
+      return 1;
+    }
     const message = err instanceof Error ? err.message : String(err);
-    process.stderr.write(`Unerwarteter Fehler: ${message}\n`);
+    process.stderr.write(unexpectedErrorMessage(message));
     return 1;
   }
 }

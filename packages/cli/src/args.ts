@@ -1,5 +1,11 @@
 import { parseArgs as parseNodeArgs } from "node:util";
 import type { MarkerFormat } from "@unpii/sdk";
+import {
+  invalidArgumentsMessage,
+  invalidMarkerMessage,
+  restoreNeedsFromMessage,
+  tooManyPathsMessage,
+} from "./messages.js";
 
 /** Every value `MarkerFormat` can take, kept in sync with the SDK's generated union by the
  * compiler: adding a value here that isn't part of the imported type is a type error. There is
@@ -88,7 +94,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
     raw = parseWithNodeUtil(argv);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    throw new ArgsError(`Ungueltige Argumente: ${message}`);
+    throw new ArgsError(invalidArgumentsMessage(message));
   }
   const { values, positionals } = raw;
 
@@ -98,7 +104,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
   const isRestore = positionals[0] === "restore";
   const rest = isRestore ? positionals.slice(1) : positionals;
   if (rest.length > 1) {
-    throw new ArgsError("Nur ein Pfad ist erlaubt.");
+    throw new ArgsError(tooManyPathsMessage());
   }
   const path = rest[0];
   const out = typeof values.out === "string" ? values.out : undefined;
@@ -106,7 +112,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
   if (isRestore) {
     const from = typeof values.from === "string" ? values.from : undefined;
     if (!help && !version && from === undefined) {
-      throw new ArgsError("restore braucht --from <pfad>.");
+      throw new ArgsError(restoreNeedsFromMessage());
     }
     return { command: "restore", help, version, from, path, out };
   }
@@ -117,9 +123,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
   let marker: MarkerFormat | undefined;
   if (!help && !version && typeof values.marker === "string") {
     if (!isMarkerFormat(values.marker)) {
-      throw new ArgsError(
-        `Ungueltiges --marker: ${values.marker}. Erlaubt: ${MARKER_FORMATS.join(", ")}.`,
-      );
+      throw new ArgsError(invalidMarkerMessage(values.marker, MARKER_FORMATS.join(", ")));
     }
     marker = values.marker;
   }

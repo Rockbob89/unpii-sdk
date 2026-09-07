@@ -242,3 +242,141 @@ The tool never writes a file that wasn't requested via --out, and never logs the
 export function helpText(lang: Lang = resolveLang(process.env)): string {
   return lang === "de" ? HELP_TEXT_DE : HELP_TEXT_EN;
 }
+
+// --- The rest of the same bilingual-output decision (Plan 08b): these used to live inline at
+// their throw/write sites in args.ts, run.ts, and cli.ts. In every function below, an
+// interpolated `${...}` value is never translated — it is Node's own `node:util.parseArgs` error
+// text, an OS filesystem/stream error message, or a CLI flag value the caller typed, never the
+// text being anonymized ("Fehlermeldungen zitieren nie den Input" governs the request/response
+// content, not argv). Only the sentence wrapped around the value is bilingual.
+
+/** Thrown as `ArgsError` when `node:util`'s `parseArgs` itself rejects argv (unknown flag,
+ * missing value, etc.). Deliberately does NOT end in "\n" — `cli.ts` appends it once when
+ * printing `err.message`, so a function that also added one would double it. */
+export function invalidArgumentsMessage(
+  nodeMessage: string,
+  lang: Lang = resolveLang(process.env),
+): string {
+  return lang === "de"
+    ? `Ungueltige Argumente: ${nodeMessage}`
+    : `Invalid arguments: ${nodeMessage}`;
+}
+
+/** Thrown as `ArgsError` when more than one positional path was given. No trailing "\n" — same
+ * reason as `invalidArgumentsMessage`. */
+export function tooManyPathsMessage(lang: Lang = resolveLang(process.env)): string {
+  return lang === "de" ? "Nur ein Pfad ist erlaubt." : "Only one path is allowed.";
+}
+
+/** Thrown as `ArgsError` by `parseArgs` when `restore` was given without `--from`, and written
+ * directly to stderr by `run.ts`'s defensive fallback for the same condition (normally
+ * unreachable — args.ts already guards it; see the comment at that call site). No trailing "\n"
+ * — the `parseArgs` call site relies on `cli.ts` to add it, and the `run.ts` call site adds its
+ * own. */
+export function restoreNeedsFromMessage(lang: Lang = resolveLang(process.env)): string {
+  return lang === "de" ? "restore braucht --from <pfad>." : "restore needs --from <path>.";
+}
+
+/** Thrown as `ArgsError` when `--marker` doesn't match one of `MARKER_FORMATS`. `value` and
+ * `allowed` are the caller's own flag value and the allowed-list text — CLI argv, not
+ * anonymization input. No trailing "\n" — same reason as `invalidArgumentsMessage`. */
+export function invalidMarkerMessage(
+  value: string,
+  allowed: string,
+  lang: Lang = resolveLang(process.env),
+): string {
+  return lang === "de"
+    ? `Ungueltiges --marker: ${value}. Erlaubt: ${allowed}.`
+    : `Invalid --marker: ${value}. Allowed: ${allowed}.`;
+}
+
+/** Inner detail text for `fromReadFailedMessage` below, when the `--from` file parsed as JSON
+ * but had no `spans` array. Static — carries none of the file's own content, so it is safe to
+ * nest inside `fromReadFailedMessage`'s `detail` parameter. */
+export function missingSpansArrayMessage(lang: Lang = resolveLang(process.env)): string {
+  return lang === "de"
+    ? "Datei enthaelt kein 'spans'-Array."
+    : "File does not contain a 'spans' array.";
+}
+
+/** Inner detail text for `fromReadFailedMessage` below, when the `--from` file isn't valid JSON
+ * at all. Deliberately static rather than forwarding `JSON.parse`'s own error message: that
+ * message can quote a fragment of the parsed text (measured on Node 24 — `JSON.parse("not json
+ * at all, ...")` throws `Unexpected token 'o', "not json at"... is not valid JSON`), and a
+ * `--from` file holds spans carrying their `original` PII values, so a forwarded fragment could
+ * itself be PII. `run.ts` therefore never passes a caught `JSON.parse` error's `.message` through
+ * — it always substitutes this static sentence instead. */
+export function invalidJsonMessage(lang: Lang = resolveLang(process.env)): string {
+  return lang === "de"
+    ? "Datei enthaelt kein gueltiges JSON."
+    : "File does not contain valid JSON.";
+}
+
+/** Printed to stderr, exit 1, when the `--from` file couldn't be read or parsed. `detail` is
+ * either an OS filesystem error message (safe — describes a path, never file content) or one of
+ * `missingSpansArrayMessage`/`invalidJsonMessage` above (also safe) — never a raw `JSON.parse`
+ * message, per `invalidJsonMessage`'s doc comment. */
+export function fromReadFailedMessage(
+  detail: string,
+  lang: Lang = resolveLang(process.env),
+): string {
+  return lang === "de"
+    ? `--from konnte nicht gelesen werden: ${detail}\n`
+    : `--from could not be read: ${detail}\n`;
+}
+
+/** Printed to stderr, exit 1, when the restore answer (positional path or stdin) couldn't be
+ * read. `detail` is always an OS filesystem/stream error message: this path never parses JSON,
+ * so — unlike `fromReadFailedMessage` — there is no `JSON.parse`-quoting risk to guard against
+ * here. */
+export function answerReadFailedMessage(
+  detail: string,
+  lang: Lang = resolveLang(process.env),
+): string {
+  return lang === "de"
+    ? `Antwort konnte nicht gelesen werden: ${detail}\n`
+    : `Answer could not be read: ${detail}\n`;
+}
+
+/** Printed to stderr, exit 1, when the main command's input (positional path or stdin) couldn't
+ * be read. `detail` is always an OS filesystem/stream error message — same reasoning as
+ * `answerReadFailedMessage`: no JSON parsing happens on this path either. */
+export function inputReadFailedMessage(
+  detail: string,
+  lang: Lang = resolveLang(process.env),
+): string {
+  return lang === "de"
+    ? `Eingabe konnte nicht gelesen werden: ${detail}\n`
+    : `Input could not be read: ${detail}\n`;
+}
+
+/** Printed to stderr, exit 1, when the API response body wasn't valid JSON. The SDK's
+ * `res.json()` (undici) throws a `SyntaxError` for this, and — exactly like the local
+ * `JSON.parse` case above — that error's own message can quote a fragment of the body (measured
+ * against a real undici `fetch`: same `Unexpected token ...` shape). A `--json` response's spans
+ * carry their `original` PII values, so `run.ts` intercepts `SyntaxError` specifically and uses
+ * this static sentence instead of the caught error's `.message`. */
+export function invalidResponseMessage(lang: Lang = resolveLang(process.env)): string {
+  return lang === "de" ? "Antwort war kein gueltiges JSON.\n" : "Response was not valid JSON.\n";
+}
+
+/** Printed to stderr, exit 1, for any other error `runMain` didn't anticipate (not a
+ * `UnpiiError`, not the `SyntaxError` case `invalidResponseMessage` covers). `detail` is that
+ * error's own `.message` — always our own code's, Node's, or the SDK's own error text, never
+ * request or response content, since the one path that could carry response content is
+ * intercepted before reaching here. */
+export function genericErrorMessage(detail: string, lang: Lang = resolveLang(process.env)): string {
+  return lang === "de" ? `Fehler: ${detail}\n` : `Error: ${detail}\n`;
+}
+
+/** Printed to stderr, exit 1, by `cli.ts`'s last-resort catch-all — anything `parseArgs`/`runCli`
+ * didn't already handle. Carries the same `SyntaxError` carve-out as `genericErrorMessage`/
+ * `invalidResponseMessage` at its call site: defense in depth, since nothing below `main()`
+ * should let a raw JSON-parse error reach this far, but if one ever does, its message must not
+ * be forwarded either. */
+export function unexpectedErrorMessage(
+  detail: string,
+  lang: Lang = resolveLang(process.env),
+): string {
+  return lang === "de" ? `Unerwarteter Fehler: ${detail}\n` : `Unexpected error: ${detail}\n`;
+}

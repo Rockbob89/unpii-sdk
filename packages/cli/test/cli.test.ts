@@ -241,6 +241,33 @@ describe("unpii CLI (spawned dist/cli.js against a local fixture server)", () =>
     expect(message).not.toContain("Kein API-Key");
   });
 
+  it("--marker with an invalid value, LANG=de_DE.UTF-8 -> German usage error, exit 2", async () => {
+    // Pinned to German for the same reason as the missing-key tests above: the assertions check
+    // the literal German sentence, so the child's language must not depend on the host locale.
+    // No server/key involved on purpose: parseArgs() rejects this before any network code runs.
+    const result = await runCliBin(["--marker", "quatsch"], {
+      input: "text",
+      env: { LANG: "de_DE.UTF-8" },
+      unset: ["LC_ALL"],
+    });
+    expect(result.status).toBe(2);
+    const message = result.stderr.toString("utf8");
+    expect(message).toContain("Ungueltiges --marker");
+    expect(message).not.toContain("Invalid --marker");
+  });
+
+  it("--marker with an invalid value, LANG=C -> English usage error, exit 2", async () => {
+    const result = await runCliBin(["--marker", "quatsch"], {
+      input: "text",
+      env: { LANG: "C" },
+      unset: ["LC_ALL"],
+    });
+    expect(result.status).toBe(2);
+    const message = result.stderr.toString("utf8");
+    expect(message).toContain("Invalid --marker");
+    expect(message).not.toContain("Ungueltiges --marker");
+  });
+
   it("a 402 from error.tier-required.json -> exit 1, one sentence, never the body or the input", async () => {
     const secretInput = "SECRET_MARKER_INPUT_cli_9f3ac21";
     const result = await runCliBin([], {
