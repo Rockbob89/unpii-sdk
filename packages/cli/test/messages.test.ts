@@ -3,14 +3,26 @@ import { describe, expect, it } from "vitest";
 import {
   API_ERROR_MESSAGES,
   type Lang,
+  answerReadFailedMessage,
   apiErrorMessage,
+  fromReadFailedMessage,
+  genericErrorMessage,
   helpText,
+  inputReadFailedMessage,
+  invalidArgumentsMessage,
+  invalidJsonMessage,
+  invalidMarkerMessage,
+  invalidResponseMessage,
+  missingSpansArrayMessage,
   noApiKeyMessage,
   outRequiredForDocumentMessage,
   rateLimitSentence,
   resolveLang,
+  restoreNeedsFromMessage,
   restoreSummary,
   scanNotAvailableMessage,
+  tooManyPathsMessage,
+  unexpectedErrorMessage,
 } from "../src/messages.js";
 
 describe("resolveLang()", () => {
@@ -110,6 +122,105 @@ describe("message functions: German and English differ, both non-empty", () => {
   it("helpText", () => {
     const de = helpText("de");
     const en = helpText("en");
+    expect(de.trim().length).toBeGreaterThan(0);
+    expect(en.trim().length).toBeGreaterThan(0);
+    expect(de).not.toBe(en);
+  });
+
+  // Plan 08b T3b: the nine messages left behind in args.ts/run.ts (plus two more found by grep:
+  // run.ts's --from defensive fallback, which reuses restoreNeedsFromMessage, and cli.ts's
+  // catch-all), moved here so they carry the same bilingual coverage as everything above.
+  it("invalidArgumentsMessage", () => {
+    const de = invalidArgumentsMessage("Unknown option '--bogus'", "de");
+    const en = invalidArgumentsMessage("Unknown option '--bogus'", "en");
+    expect(de.trim().length).toBeGreaterThan(0);
+    expect(en.trim().length).toBeGreaterThan(0);
+    expect(de).not.toBe(en);
+  });
+
+  it("tooManyPathsMessage", () => {
+    const de = tooManyPathsMessage("de");
+    const en = tooManyPathsMessage("en");
+    expect(de.trim().length).toBeGreaterThan(0);
+    expect(en.trim().length).toBeGreaterThan(0);
+    expect(de).not.toBe(en);
+  });
+
+  it("restoreNeedsFromMessage", () => {
+    const de = restoreNeedsFromMessage("de");
+    const en = restoreNeedsFromMessage("en");
+    expect(de.trim().length).toBeGreaterThan(0);
+    expect(en.trim().length).toBeGreaterThan(0);
+    expect(de).not.toBe(en);
+  });
+
+  it("invalidMarkerMessage", () => {
+    const de = invalidMarkerMessage("bogus", "default, custom, xxxxx, blackbar", "de");
+    const en = invalidMarkerMessage("bogus", "default, custom, xxxxx, blackbar", "en");
+    expect(de.trim().length).toBeGreaterThan(0);
+    expect(en.trim().length).toBeGreaterThan(0);
+    expect(de).not.toBe(en);
+  });
+
+  it("missingSpansArrayMessage", () => {
+    const de = missingSpansArrayMessage("de");
+    const en = missingSpansArrayMessage("en");
+    expect(de.trim().length).toBeGreaterThan(0);
+    expect(en.trim().length).toBeGreaterThan(0);
+    expect(de).not.toBe(en);
+  });
+
+  it("invalidJsonMessage", () => {
+    const de = invalidJsonMessage("de");
+    const en = invalidJsonMessage("en");
+    expect(de.trim().length).toBeGreaterThan(0);
+    expect(en.trim().length).toBeGreaterThan(0);
+    expect(de).not.toBe(en);
+  });
+
+  it("fromReadFailedMessage", () => {
+    const de = fromReadFailedMessage("ENOENT: no such file", "de");
+    const en = fromReadFailedMessage("ENOENT: no such file", "en");
+    expect(de.trim().length).toBeGreaterThan(0);
+    expect(en.trim().length).toBeGreaterThan(0);
+    expect(de).not.toBe(en);
+  });
+
+  it("answerReadFailedMessage", () => {
+    const de = answerReadFailedMessage("ENOENT: no such file", "de");
+    const en = answerReadFailedMessage("ENOENT: no such file", "en");
+    expect(de.trim().length).toBeGreaterThan(0);
+    expect(en.trim().length).toBeGreaterThan(0);
+    expect(de).not.toBe(en);
+  });
+
+  it("inputReadFailedMessage", () => {
+    const de = inputReadFailedMessage("ENOENT: no such file", "de");
+    const en = inputReadFailedMessage("ENOENT: no such file", "en");
+    expect(de.trim().length).toBeGreaterThan(0);
+    expect(en.trim().length).toBeGreaterThan(0);
+    expect(de).not.toBe(en);
+  });
+
+  it("invalidResponseMessage", () => {
+    const de = invalidResponseMessage("de");
+    const en = invalidResponseMessage("en");
+    expect(de.trim().length).toBeGreaterThan(0);
+    expect(en.trim().length).toBeGreaterThan(0);
+    expect(de).not.toBe(en);
+  });
+
+  it("genericErrorMessage", () => {
+    const de = genericErrorMessage("boom", "de");
+    const en = genericErrorMessage("boom", "en");
+    expect(de.trim().length).toBeGreaterThan(0);
+    expect(en.trim().length).toBeGreaterThan(0);
+    expect(de).not.toBe(en);
+  });
+
+  it("unexpectedErrorMessage", () => {
+    const de = unexpectedErrorMessage("boom", "de");
+    const en = unexpectedErrorMessage("boom", "en");
     expect(de.trim().length).toBeGreaterThan(0);
     expect(en.trim().length).toBeGreaterThan(0);
     expect(de).not.toBe(en);
