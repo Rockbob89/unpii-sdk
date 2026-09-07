@@ -10,7 +10,7 @@
     "typecheck": "pnpm -r typecheck",
     "lint": "biome check .",
     "format": "biome format --write .",
-    "test": "pnpm -r test && vitest run scripts",
+    "test": "vitest run",
     "verify": "pnpm typecheck && pnpm lint && pnpm test"
   },
   "devDependencies": {
