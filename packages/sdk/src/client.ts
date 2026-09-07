@@ -12,7 +12,7 @@ import type {
   UnpiiOptions,
 } from "./types.js";
 
-const DEFAULT_BASE_URL = "https://api.unpii.me";
+const DEFAULT_BASE_URL = "https://unpii.me";
 
 /**
  * Reads a possibly-error response body as JSON without ever throwing. An error body can be a

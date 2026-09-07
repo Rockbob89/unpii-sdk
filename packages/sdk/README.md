@@ -69,7 +69,7 @@ A non-empty `unknown` usually means the model invented a marker. That is worth l
 new Unpii({ apiKey, baseUrl?, fetch? })
 ```
 
-`baseUrl` defaults to `https://api.unpii.me`. `fetch` lets you inject your own implementation,
+`baseUrl` defaults to `https://unpii.me`. `fetch` lets you inject your own implementation,
 which is how the test suite runs without a network.
 
 - `anonymize(text, { markerFormat?, ambiguous?, keep?, structure? })` - text in, `anonymized`
