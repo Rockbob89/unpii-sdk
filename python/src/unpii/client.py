@@ -185,12 +185,11 @@ class Client:
     ) -> AnonymizeResult:
         """POST /api/v1/anonymize.
 
-        `keep` and `structure` are accepted and sent, but honoured only by
-        the server work in Sessions 05 and 07 — today's server silently
-        strips both (verified 2026-09-07 by sending them and getting a 200
-        with unchanged behavior). They're already part of this signature so
-        callers pinning an SDK version don't need a breaking bump once the
-        server catches up.
+        `keep` and `structure` are accepted and sent, but honoured only by a
+        later server release — today's server silently strips both (verified
+        2026-09-07 by sending them and getting a 200 with unchanged
+        behavior). They're already part of this signature so callers pinning
+        an SDK version don't need a breaking bump once the server catches up.
         """
         body: dict[str, Any] = {"text": text}
         if marker_format is not None:

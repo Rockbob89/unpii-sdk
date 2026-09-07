@@ -1,8 +1,8 @@
 import type { RestoreResult, UnpiiError } from "@unpii/sdk";
 
 /** The two output languages the CLI speaks. English is the default — the npm audience is
- * international — with German available via `LANG`/`LC_ALL` for the audience Plan 08 wrote the
- * original sentences for. */
+ * international — with German available via `LANG`/`LC_ALL` for the audience the original
+ * sentences were written for. */
 export type Lang = "de" | "en";
 
 /**
@@ -100,9 +100,9 @@ function unknownErrorMessage(status: number, lang: Lang): string {
 }
 
 /** The STATUS cell in `--scan`'s table (`run.ts`'s `renderScanTable`), per span: whether it fell
- * into `uncertainSpans` (Charter §4 — a low-confidence span is signal, never silently dropped)
- * or into `spans` proper. Plan 08b T3/T3b bilingualized every other CLI message; this one was
- * left hardcoded to German ("unsicher"/"sicher") under an otherwise-English table header row. */
+ * into `uncertainSpans` (a low-confidence span is signal, never silently dropped) or into
+ * `spans` proper. A later pass bilingualized every other CLI message; this one was left
+ * hardcoded to German ("unsicher"/"sicher") under an otherwise-English table header row. */
 export function scanStatusLabel(uncertain: boolean, lang: Lang = resolveLang(process.env)): string {
   if (lang === "de") return uncertain ? "unsicher" : "sicher";
   return uncertain ? "uncertain" : "confirmed";
@@ -252,7 +252,7 @@ export function helpText(lang: Lang = resolveLang(process.env)): string {
   return lang === "de" ? HELP_TEXT_DE : HELP_TEXT_EN;
 }
 
-// --- The rest of the same bilingual-output decision (Plan 08b): these used to live inline at
+// --- The rest of the same bilingual-output decision: these used to live inline at
 // their throw/write sites in args.ts, run.ts, and cli.ts. In every function below, an
 // interpolated `${...}` value is never translated — it is Node's own `node:util.parseArgs` error
 // text, an OS filesystem/stream error message, or a CLI flag value the caller typed, never the

@@ -14,9 +14,9 @@ function span(overrides: Partial<Span> = {}): Span {
   };
 }
 
-// Plan 08b T6: renderScanTable's STATUS column was hardcoded to the German words ("unsicher" /
-// "sicher") no matter the resolved language — visibly broken under the English default a
-// header row of CATEGORY/ID/START/END/SCORE/STATUS implies. lang is passed explicitly here
+// renderScanTable's STATUS column was hardcoded to the German words ("unsicher" / "sicher") no
+// matter the resolved language — visibly broken under the English default a header row of
+// CATEGORY/ID/START/END/SCORE/STATUS implies. lang is passed explicitly here
 // (never relying on the ambient LANG/LC_ALL of whatever process runs the suite).
 describe("renderScanTable()", () => {
   it("English: STATUS reads 'confirmed'/'uncertain', never the German words", () => {

@@ -128,9 +128,9 @@ describe("message functions: German and English differ, both non-empty", () => {
     expect(de).not.toBe(en);
   });
 
-  // Plan 08b T3b: the nine messages left behind in args.ts/run.ts (plus two more found by grep:
-  // run.ts's --from defensive fallback, which reuses restoreNeedsFromMessage, and cli.ts's
-  // catch-all), moved here so they carry the same bilingual coverage as everything above.
+  // The nine messages left behind in args.ts/run.ts (plus two more found by grep: run.ts's
+  // --from defensive fallback, which reuses restoreNeedsFromMessage, and cli.ts's catch-all),
+  // moved here so they carry the same bilingual coverage as everything above.
   it("invalidArgumentsMessage", () => {
     const de = invalidArgumentsMessage("Unknown option '--bogus'", "de");
     const en = invalidArgumentsMessage("Unknown option '--bogus'", "en");
@@ -229,8 +229,8 @@ describe("message functions: German and English differ, both non-empty", () => {
 });
 
 describe("scanStatusLabel()", () => {
-  // Plan 08b T6: --scan's STATUS column was hardcoding the German words even under the
-  // English default (headers are English, the cells said "unsicher"/"sicher" regardless).
+  // --scan's STATUS column was hardcoding the German words even under the English default
+  // (headers are English, the cells said "unsicher"/"sicher" regardless).
   it("uncertain span, German", () => {
     expect(scanStatusLabel(true, "de")).toBe("unsicher");
   });
