@@ -200,16 +200,45 @@ describe("unpii CLI (spawned dist/cli.js against a local fixture server)", () =>
   });
 
   it("missing key -> exit 2, message names both env vars and the account URL", async () => {
+    // Pinned to German (LANG, LC_ALL unset) — the assertion below checks the literal German
+    // sentence, so the language has to be deterministic regardless of the host's own locale.
     const result = await runCliBin([], {
       input: "text",
-      env: { UNPII_BASE_URL: server.url },
-      unset: ["UNPII_API_KEY", "UNPII_API_KEY_FILE"],
+      env: { UNPII_BASE_URL: server.url, LANG: "de_DE.UTF-8" },
+      unset: ["UNPII_API_KEY", "UNPII_API_KEY_FILE", "LC_ALL"],
     });
     expect(result.status).toBe(2);
     const message = result.stderr.toString("utf8");
     expect(message).toContain("UNPII_API_KEY");
     expect(message).toContain("UNPII_API_KEY_FILE");
     expect(message).toContain("https://unpii.me/de/account/api-keys");
+  });
+
+  it("missing key, LANG=de_DE.UTF-8 -> the German message, exit 2 (plan acceptance line)", async () => {
+    // Explicitly unsets LC_ALL too — the whole point is that the CHILD process resolves the
+    // language from ITS OWN env, not whatever this test runner's session happens to carry
+    // (a session LC_ALL would otherwise silently override the LANG set here).
+    const result = await runCliBin([], {
+      input: "text",
+      env: { UNPII_BASE_URL: server.url, LANG: "de_DE.UTF-8" },
+      unset: ["UNPII_API_KEY", "UNPII_API_KEY_FILE", "LC_ALL"],
+    });
+    expect(result.status).toBe(2);
+    const message = result.stderr.toString("utf8");
+    expect(message).toContain("Kein API-Key");
+    expect(message).not.toContain("No API key");
+  });
+
+  it("missing key, LANG=C -> the English message, exit 2 (plan acceptance line)", async () => {
+    const result = await runCliBin([], {
+      input: "text",
+      env: { UNPII_BASE_URL: server.url, LANG: "C" },
+      unset: ["UNPII_API_KEY", "UNPII_API_KEY_FILE", "LC_ALL"],
+    });
+    expect(result.status).toBe(2);
+    const message = result.stderr.toString("utf8");
+    expect(message).toContain("No API key");
+    expect(message).not.toContain("Kein API-Key");
   });
 
   it("a 402 from error.tier-required.json -> exit 1, one sentence, never the body or the input", async () => {
@@ -248,9 +277,12 @@ describe("unpii CLI (spawned dist/cli.js against a local fixture server)", () =>
     });
 
     try {
+      // Pinned to German (LANG, LC_ALL unset) — same reason as the missing-key test above: the
+      // assertions below check literal German substrings.
       const result = await runCliBin(["--scan"], {
         input: "irrelevant, the server answers 404 for everything",
-        env: { UNPII_API_KEY: "docs-key", UNPII_BASE_URL: url },
+        env: { UNPII_API_KEY: "docs-key", UNPII_BASE_URL: url, LANG: "de_DE.UTF-8" },
+        unset: ["LC_ALL"],
       });
       expect(result.status).toBe(1);
       const message = result.stderr.toString("utf8");
