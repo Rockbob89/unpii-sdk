@@ -11,7 +11,7 @@
  *
  * `Span`, `AnonymizeStats` and `FileWarning` are not schemas of their own in the contract — the
  * server inlines them into the response schemas — so this generator never asks openapiTS to name
- * them directly. Instead a fixed ALIAS_BLOCK below derives all eight public SDK type names from
+ * them directly. Instead a fixed ALIAS_BLOCK below derives all nine public SDK type names from
  * the five generated schemas. See the comment on that block for why it uses index access rather
  * than a hand-copied shape.
  *
@@ -29,7 +29,7 @@ const SOURCE_FILE = "contract/openapi.json";
 const REGEN_COMMAND = "pnpm --filter @unpii/sdk gen:types";
 
 /**
- * The five schemas this SDK derives its public types from. The contract carries twenty
+ * The five schemas this SDK derives its public types from. The contract carries 21 more
  * (billing, allowlist, api-keys, admin, auth, ...) — everything else is deliberately excluded so
  * the published `.d.ts` exposes only the anonymize/file/limits surface, not the whole private API.
  */
@@ -74,7 +74,7 @@ const BANNER = [
 ].join("\n");
 
 /**
- * The eight public SDK type names, aliased from the five generated `components["schemas"]`
+ * The nine public SDK type names, aliased from the five generated `components["schemas"]`
  * entries by INDEX ACCESS rather than copied out by hand. This is deliberate: if `markerFormat`
  * disappeared from the contract, or `spans` stopped being an array, a hand-copied alias would
  * keep compiling and silently lie about the contract. An index access into a shape that no

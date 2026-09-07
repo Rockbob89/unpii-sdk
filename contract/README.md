@@ -42,7 +42,7 @@ whole tree (`grep -rn "api\.unpii\.me"`, excluding `node_modules`, `dist`, `.ven
 
 ## What's in here, and what isn't
 
-The document carries 25 schemas: five the SDK's public surface is built from, and twenty more —
+The document carries 26 schemas: five the SDK's public surface is built from, and 21 more —
 billing, allowlist, api-keys, admin, auth, cancellation — that belong to the private web/API
 surface and have nothing to do with a published client SDK. `gen-types.ts` reduces the document
 to exactly these five before handing it to `openapiTS()`:
@@ -60,7 +60,7 @@ five is missing from the source document, rather than silently generating fewer.
 
 `Span`, `AnonymizeStats` and `FileWarning` are **not** top-level schemas in this contract — the
 server inlines their shape directly into `AnonymizeResponse.spans`, `.stats`,
-`AnonymizeFileResponse.warnings`, etc. `types.generated.ts` derives all eight public SDK type
+`AnonymizeFileResponse.warnings`, etc. `types.generated.ts` derives all nine public SDK type
 names (three of which are these inline shapes) from the five schemas above by TypeScript index
 access (`components["schemas"]["AnonymizeResponse"]["spans"][number]`, and so on) rather than by
 naming them separately in the reduced document — see the comment on `ALIAS_BLOCK` in
