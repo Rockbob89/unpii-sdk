@@ -1,15 +1,17 @@
 # SDK-Fixtures - Herkunft
 
 Jede `.json` in diesem Verzeichnis ist eine **unveraenderte Antwort des echten Servers**,
-aufgenommen am **2026-09-07** gegen die lokale Dev-API (`pnpm dev`, api auf `:3001`), die ihre
-Inferenz beim GPU-Host bezog. Modell laut `/healthz` der Inferenz:
-`Bobbydarocketbob/unpii-privacy-filter-laufA`. Nichts hier ist handgeschrieben. Die einzige
-nachtraegliche Aenderung ist Biomes JSON-Formatierung (Einrueckung, Zeilenumbrueche), damit
-`pnpm lint` ohne Ausnahmeregel gruen bleibt - Schluesselreihenfolge, Werte und
-Gleitkomma-Genauigkeit sind die des Servers.
+aufgenommen am **2026-09-07** gegen eine Entwicklungsinstanz der API. Nichts hier ist
+handgeschrieben. Die einzige nachtraegliche Aenderung ist Biomes JSON-Formatierung
+(Einrueckung, Zeilenumbrueche), damit `pnpm lint` ohne Ausnahmeregel gruen bleibt -
+Schluesselreihenfolge, Werte und Gleitkomma-Genauigkeit sind die des Servers.
 
-Der Grund steht in der Charter (§6, Billing): ein handgeschriebener Stub hat schon einmal einen
-Integrationsfehler bis in die Produktion gruen durchgewinkt. Ein Fixture ist ein Beleg oder es
+Welche Modellversion die Spans erzeugt hat, steht in den Aufzeichnungen des Hauptrepos, das die
+API baut, und nicht hier: welches Modell hinter der API laeuft, ist keine Zusage an den Aufrufer
+und aendert sich, ohne dass der Vertrag sich aendert.
+
+Der Grund fuer diese Strenge ist teuer bezahlt: ein handgeschriebener Stub hat schon einmal
+einen Integrationsfehler bis in die Produktion gruen durchgewinkt. Ein Fixture ist ein Beleg oder es
 ist nichts. Wer eine Datei ersetzt, nimmt sie neu auf - er editiert sie nicht.
 
 Eingabetext aller Text-Aufnahmen ist der Sample-Text der Weboberflaeche (der i18n-String
