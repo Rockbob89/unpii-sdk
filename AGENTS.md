@@ -63,7 +63,12 @@ that point, so a forwarded `JSON.parse`/`SyntaxError` message is a potential PII
 error string. The CLI catches `SyntaxError` at both sites and substitutes a fixed sentence
 instead of the caught message - see `invalidJsonMessage` and `invalidResponseMessage` in
 `packages/cli/src/messages.ts`. Anyone touching either call site has to preserve that substitution,
-not just the try/catch.
+not just the try/catch - and that is now a test rather than an appeal to care:
+`packages/cli/test/no-leak.test.ts` drives a broken `--from` file and a non-JSON 200 response
+through the BUILT `dist/cli.js` and asserts that no fragment of either reaches stdout or stderr.
+Both halves were checked by deleting the substitution and watching them go red, each against its
+own call site - a guard nobody has seen fail is a claim, the same standard §2 holds dependencies
+to.
 
 **CLI messages are bilingual, English by default.** Every user-facing CLI string lives in
 `packages/cli/src/messages.ts` as a `{ de, en }` pair, resolved via `LANG`/`LC_ALL`
