@@ -24,7 +24,7 @@ from typing import Any
 
 from .errors import UnpiiError
 
-_DEFAULT_BASE_URL = "https://api.unpii.me"
+_DEFAULT_BASE_URL = "https://unpii.me"
 _DEFAULT_TIMEOUT = 120.0
 
 

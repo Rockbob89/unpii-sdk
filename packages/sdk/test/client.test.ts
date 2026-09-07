@@ -65,7 +65,7 @@ describe("Unpii client", () => {
       expect(calls).toHaveLength(1);
       const call = calls[0];
       if (!call) throw new Error("expected a recorded call");
-      expect(call.url).toBe("https://api.unpii.me/api/v1/anonymize");
+      expect(call.url).toBe("https://unpii.me/api/v1/anonymize");
       expect(call.init.method).toBe("POST");
       const headers = call.init.headers as Record<string, string>;
       expect(headers.Authorization).toBe("Bearer docs-key");
@@ -103,7 +103,7 @@ describe("Unpii client", () => {
       await client.anonymize("hello");
       const call = calls[0];
       if (!call) throw new Error("expected a recorded call");
-      expect(call.url).toBe("https://api.unpii.me/api/v1/anonymize");
+      expect(call.url).toBe("https://unpii.me/api/v1/anonymize");
     });
 
     it("strips trailing slashes from an explicit baseUrl", async () => {
@@ -284,7 +284,7 @@ describe("Unpii client", () => {
       const result = await client.limits();
 
       expect(calls[0]?.init.method).toBe("GET");
-      expect(calls[0]?.url).toBe("https://api.unpii.me/api/v1/limits");
+      expect(calls[0]?.url).toBe("https://unpii.me/api/v1/limits");
       expect(result.current.tier).toBe("docs");
     });
   });

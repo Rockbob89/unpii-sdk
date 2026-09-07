@@ -72,7 +72,7 @@ follow turns a test red.
 ## API
 
 ```python
-Client(api_key, base_url="https://api.unpii.me", timeout=120.0)
+Client(api_key, base_url="https://unpii.me", timeout=120.0)
 ```
 
 - `anonymize(text, *, marker_format=None, ambiguous=None, keep=None, structure=None)` - text in,

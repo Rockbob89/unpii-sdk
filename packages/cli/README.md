@@ -51,7 +51,7 @@ Optionen:
 Umgebungsvariablen:
   UNPII_API_KEY       API-Key
   UNPII_API_KEY_FILE  Datei mit dem API-Key (wird getrimmt gelesen)
-  UNPII_BASE_URL      Basis-URL, Default https://api.unpii.me
+  UNPII_BASE_URL      Basis-URL, Default https://unpii.me
 ```
 
 Without a path, input is read from stdin. The file type is detected from both the extension and
