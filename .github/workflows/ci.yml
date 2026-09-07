@@ -1,0 +1,94 @@
+name: CI
+
+# `schedule` and `workflow_dispatch` are here only for the contract-drift job below — they are
+# NOT meant to make `node`/`python` run outside pull_request/push. Each job's own `if:` restricts
+# it to the event(s) it is meant for; see the comment on `contract-drift` for why it needs
+# different triggers than the rest of this file despite living in the same workflow.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    # Nightly, off the hour on purpose to avoid the queueing GitHub sees at :00 across all repos
+    # scheduling "nightly" the same way.
+    - cron: "7 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  node:
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version:` input: pnpm/action-setup reads the pinned version from this repo's
+      # `packageManager` field in package.json. Writing it again here would just be a second
+      # place for the pin to drift from.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # 22 is the `engines` floor both packages declare, not the Node version used for local
+          # development (24) — CI proves the floor actually works.
+          node-version: "22"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+
+      # There is no separate `npm pack --dry-run` step here on purpose. Both
+      # packages/sdk/test/package-shape.test.ts and packages/cli/test/package-shape.test.ts
+      # already run `npm pack --dry-run --json` against their own built dist/ (via each
+      # package's vitest globalSetup, test/build-setup.ts) and assert exactly what ships —
+      # dist/ and README.md, never test/, fixtures/, test-cases/ or scripts/. `pnpm test` below
+      # runs those. A second, separate pack step here would just be the same check re-derived a
+      # second time, free to drift from the one that actually runs.
+      - run: pnpm test
+
+  python:
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Both versions because the donor project measured its baseline against both.
+        python-version: ["3.11", "3.12"]
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - run: uv sync --extra dev
+      - run: uv run ruff check .
+      - run: uv run python -m pytest -q -rs
+
+  contract-drift:
+    # Deliberately not gated the same way as node/python above: this job hits the real
+    # production server (packages/sdk/test/contract-live.test.ts, UNPII_CONTRACT_LIVE=1) and
+    # compares it against the checked-in contract/openapi.json snapshot. A mismatch here is a
+    # message about the SERVER having moved since the snapshot was taken, not about the commit
+    # under test — so it must never be able to fail a push or a PR. It runs nightly and on
+    # manual dispatch only, which is why it reads `schedule`/`workflow_dispatch` off the
+    # workflow-level `on:` above instead of `pull_request`/`push`.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      # Runs the whole @unpii/sdk suite with the live-contract tests unskipped, rather than
+      # targeting the one file directly — same command shape as the `node` job's `pnpm test`,
+      # just scoped to the one package and with the env var that lifts the skip.
+      - run: pnpm --filter @unpii/sdk test
+        env:
+          UNPII_CONTRACT_LIVE: "1"
