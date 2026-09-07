@@ -58,9 +58,23 @@ jobs:
       # `--provenance` needs a real OIDC exchange with the registry (the `id-token: write`
       # permission above) — meaningless, and this job has no such exchange, in a dry run, so it
       # is set only on the real publish.
+      #
+      # NODE_AUTH_TOKEN is deliberately only on THIS step, not the dry-run above: a dry run
+      # authenticates nothing and should keep working with zero credentials in scope.
+      # `setup-node`'s `registry-url` above writes a small .npmrc to $RUNNER_TEMP (NOT this
+      # project's own .npmrc) and points `NPM_CONFIG_USERCONFIG` at it — checked against pnpm's
+      # own docs (pnpm.io/npmrc, pnpm.io/blog/2026/06/11/env-variables-in-repository-npmrc),
+      # not assumed: pnpm reads NPM_CONFIG_USERCONFIG "as a fallback for easier migration from
+      # npm", and — because that generated file counts as a USER-level config, not a
+      # project/workspace-root one — its `${NODE_AUTH_TOKEN}` placeholder still gets expanded.
+      # Since pnpm 11.5.3 (the same 2026-06-11 change) that expansion is exactly what no longer
+      # happens for a PROJECT-level .npmrc, which is why this does not hand-write one into the
+      # repo checkout instead — that would silently stop authenticating on the next pnpm bump.
       - name: Publish
         if: github.event_name == 'push' || inputs.dry-run == false
         run: pnpm publish -r --access public --no-git-checks --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   pypi:
     needs: check-versions
