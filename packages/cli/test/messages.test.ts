@@ -21,6 +21,7 @@ import {
   restoreNeedsFromMessage,
   restoreSummary,
   scanNotAvailableMessage,
+  scanStatusLabel,
   tooManyPathsMessage,
   unexpectedErrorMessage,
 } from "../src/messages.js";
@@ -224,6 +225,34 @@ describe("message functions: German and English differ, both non-empty", () => {
     expect(de.trim().length).toBeGreaterThan(0);
     expect(en.trim().length).toBeGreaterThan(0);
     expect(de).not.toBe(en);
+  });
+});
+
+describe("scanStatusLabel()", () => {
+  // Plan 08b T6: --scan's STATUS column was hardcoding the German words even under the
+  // English default (headers are English, the cells said "unsicher"/"sicher" regardless).
+  it("uncertain span, German", () => {
+    expect(scanStatusLabel(true, "de")).toBe("unsicher");
+  });
+
+  it("uncertain span, English — not the German word", () => {
+    const en = scanStatusLabel(true, "en");
+    expect(en.trim().length).toBeGreaterThan(0);
+    expect(en).not.toBe("unsicher");
+  });
+
+  it("confirmed span, German", () => {
+    expect(scanStatusLabel(false, "de")).toBe("sicher");
+  });
+
+  it("confirmed span, English — not the German word", () => {
+    const en = scanStatusLabel(false, "en");
+    expect(en.trim().length).toBeGreaterThan(0);
+    expect(en).not.toBe("sicher");
+  });
+
+  it("the two English labels are distinct from each other", () => {
+    expect(scanStatusLabel(true, "en")).not.toBe(scanStatusLabel(false, "en"));
   });
 });
 

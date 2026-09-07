@@ -99,6 +99,15 @@ function unknownErrorMessage(status: number, lang: Lang): string {
   return lang === "de" ? `Unbekannter Fehler (HTTP ${status}).` : `Unknown error (HTTP ${status}).`;
 }
 
+/** The STATUS cell in `--scan`'s table (`run.ts`'s `renderScanTable`), per span: whether it fell
+ * into `uncertainSpans` (Charter §4 — a low-confidence span is signal, never silently dropped)
+ * or into `spans` proper. Plan 08b T3/T3b bilingualized every other CLI message; this one was
+ * left hardcoded to German ("unsicher"/"sicher") under an otherwise-English table header row. */
+export function scanStatusLabel(uncertain: boolean, lang: Lang = resolveLang(process.env)): string {
+  if (lang === "de") return uncertain ? "unsicher" : "sicher";
+  return uncertain ? "uncertain" : "confirmed";
+}
+
 /** Printed to stderr, exit 1, when `--scan` hits a bare HTTP 404 on `/api/v1/scan` — the route
  * ships with a later server release, so an older deployment answers 404 for it. `Unbekannter
  * Fehler (HTTP 404).` names no reason a caller could act on; this names the actual one. */
