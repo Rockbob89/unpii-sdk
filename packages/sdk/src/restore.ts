@@ -45,9 +45,9 @@ const MARKER_SHAPE_RE = /\[?[A-Z][A-Z_]*[_\- ]?\d+\]?/gu;
  * `/anonymize` or `/scan` response). Pure function: no I/O, no network, deterministic on its
  * inputs.
  *
- * This is the CONTRACT the Python port (the sibling clients repo) has to match exactly — both
- * read `test-cases/restore-cases.json` and must produce byte-identical results on every case
- * there. See that file's `_note` before changing an expectation.
+ * This is the CONTRACT the Python port in this same repo (`python/src/unpii/restore.py`) has to
+ * match exactly — both read `test-cases/restore-cases.json` and must produce byte-identical
+ * results on every case there. See that file's `_note` before changing an expectation.
  */
 export function restore(answer: string, spans: Span[], opts?: RestoreOptions): RestoreResult {
   // 1. Build entries from spans, deduped by "label_n" (first wins).

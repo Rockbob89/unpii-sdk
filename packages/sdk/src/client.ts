@@ -121,8 +121,9 @@ export class Unpii {
    *
    * CRITICAL and load-bearing: `markerFormat`, `redactUncertain` and `outputFormat` are
    * appended to the form BEFORE the `file` part. The server's multipart parser does not
-   * reliably read fields that follow the file part — the same law is written, and obeyed, in
-   * `apps/web/src/lib/file-upload.ts`. Do not reorder this.
+   * reliably read fields that follow the file part — this is server behavior, not an
+   * implementation choice of this SDK, and the identical law is enforced in the Python client's
+   * own `anonymize_file()` in this repo. Do not reorder this.
    *
    * Content-Type is intentionally NOT set by hand: `fetch` fills in the multipart boundary
    * itself, and setting it manually would break parsing.

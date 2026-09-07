@@ -7,7 +7,7 @@ asserts it stays that way.
 This client reads NO environment variables. `UNPII_API_KEY` /
 `UNPII_BASE_URL` are the CLI's job, not the SDK's — a library that reaches
 into the environment behind the caller's back is a worse citizen for
-anything that embeds it (docs/superpowers/plans/2026-09-07-launch-08-cli-sdk.md).
+anything that embeds it.
 """
 
 from __future__ import annotations
@@ -30,9 +30,9 @@ _DEFAULT_TIMEOUT = 120.0
 
 @dataclass
 class Span:
-    """One detected PII span. Mirrors `packages/shared/src/schemas.ts`'s `Span`
-    field-for-field — the wire names already are the Python names here, no
-    camelCase to translate."""
+    """One detected PII span. Mirrors the server's `Span` schema field-for-field
+    — the wire names already are the Python names here, no camelCase to
+    translate."""
 
     start: int
     end: int
@@ -213,10 +213,12 @@ class Client:
     def scan(self, text: str) -> ScanResult:
         """POST /api/v1/scan — spans without the rendered anonymized text.
 
-        This route does not exist on today's server; it is specified in
-        docs/superpowers/plans/2026-09-07-launch-03-api-antwort.md. Against
-        today's server this call raises `UnpiiError(404, None, ...)` —
-        Fastify's default not-found handler has no route-specific `code`.
+        This route does not exist on today's server; the contract implemented
+        here is the one this package's `ScanResult` and the TypeScript SDK's
+        hand-typed `ScanResponse` (`packages/sdk/src/types.ts`, this repo)
+        define ahead of the server shipping it. Against today's server this
+        call raises `UnpiiError(404, None, ...)` — Fastify's default
+        not-found handler has no route-specific `code`.
         """
         parsed = self._request("POST", "/api/v1/scan", json_body={"text": text})
         return ScanResult(
@@ -240,10 +242,10 @@ class Client:
         CRITICAL and load-bearing: the `markerFormat`, `redactUncertain` and
         `outputFormat` parts are written BEFORE the `file` part — the
         server's multipart parser does not reliably read fields that follow
-        the file part. The identical law is documented and enforced in
-        `apps/web/src/lib/file-upload.ts` ("CRITICAL field order ... MUST be
-        appended BEFORE the `file` part"); this is the same server behavior,
-        not a Python-side design choice, so the field order here is not
+        the file part. This is server behavior, not a Python-side design
+        choice: the identical law is documented and enforced in the
+        TypeScript SDK's own `anonymizeFile()`, also in this repo
+        (`packages/sdk/src/client.ts`), so the field order here is not
         negotiable.
         """
         boundary = uuid.uuid4().hex

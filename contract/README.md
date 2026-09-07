@@ -77,9 +77,8 @@ like its siblings, and the hand-written interface in `types.ts` should be delete
 
 ## `LimitsResponse` used to be hand-typed too
 
-Until this change, `LimitsResponse` was hand-mirrored in `types.ts` against
-`apps/api/src/routes/limits.ts` in the main monorepo, because at the time it wasn't considered
-one of the schemas worth deriving. The contract carries it now, the shape matches the hand-typed
+Until this change, `LimitsResponse` was hand-mirrored in `types.ts` against the server's own
+route, because at the time it wasn't considered one of the schemas worth deriving. The contract carries it now, the shape matches the hand-typed
 version field-for-field (including the two legacy top-level groups `anonymize` and `auth`), so it
 moved into the derived set. One thing was lost in that move and is not an accident: the
 hand-typed version carried `@deprecated` JSDoc on `anonymize` and `auth`, pointing callers at

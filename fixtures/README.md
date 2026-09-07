@@ -12,9 +12,9 @@ Der Grund steht in der Charter (§6, Billing): ein handgeschriebener Stub hat sc
 Integrationsfehler bis in die Produktion gruen durchgewinkt. Ein Fixture ist ein Beleg oder es
 ist nichts. Wer eine Datei ersetzt, nimmt sie neu auf - er editiert sie nicht.
 
-Eingabetext aller Text-Aufnahmen ist der Sample-Text der Weboberflaeche
-(`redact.input.sample`, `apps/web/src/i18n/de.json`). Die Datei-Aufnahme benutzt
-`apps/api/src/test-fixtures/formatted-lo.docx`.
+Eingabetext aller Text-Aufnahmen ist der Sample-Text der Weboberflaeche (der i18n-String
+`redact.input.sample`). Die Datei-Aufnahme benutzt eine formatierte .docx-Testdatei aus dem
+Hauptrepo, das die API baut - dort Teil von dessen eigenen Test-Fixtures.
 
 | Datei | Aufruf | Aufrufer | Status |
 |---|---|---|---|
@@ -36,23 +36,18 @@ beide Formen unfallfrei durchreichen, deshalb liegen beide hier.
 
 ## Was hier NICHT liegt
 
-Fuer `POST /api/v1/scan` gibt es keine Aufnahme, weil es die Route heute nicht gibt - sie kommt
-aus Session 03 (`docs/superpowers/plans/2026-09-07-launch-03-api-antwort.md`). `Unpii.scan()`
-ist gegen den dort festgelegten Vertrag gebaut und wird im Test gegen einen Stub gefahren, der
-aus `anonymize.docs.json` abgeleitet ist. Sobald `/scan` steht, gehoert hier eine echte
-Aufnahme her - und der abgeleitete Stub verschwindet.
+Fuer `POST /api/v1/scan` gibt es keine Aufnahme, weil es die Route auf dem Server, gegen den
+aufgenommen wurde, noch nicht gibt. `Unpii.scan()` ist gegen den in diesem Repo hand-typisierten
+Vertrag gebaut (`packages/sdk/src/types.ts`s `ScanResponse`, siehe dessen Kommentar) und wird im
+Test gegen einen Stub gefahren, der aus `anonymize.docs.json` abgeleitet ist. Sobald `/scan` auf
+dem Server steht, gehoert hier eine echte Aufnahme her - und der abgeleitete Stub verschwindet.
 
 ## Neu aufnehmen
 
-```bash
-pnpm dev                                  # api :3001, Inferenz remote laut env/dev/api.env
-pnpm dev:tier:docs                        # Dev-Nutzer auf Docs
-# Key: an der Weboberflaeche unter /de/account/api-keys, oder
-#   POST /api/v1/api-keys mit einer Session (Body {"name":"..."} ) - der Klartext-Key
-#   kommt genau einmal zurueck.
-curl -s -X POST http://localhost:3001/api/v1/anonymize \
-  -H "Authorization: Bearer $UNPII_API_KEY" -H "Content-Type: application/json" \
-  --data-binary @request.json -o anonymize.docs.json
-```
+Im Hauptrepo, das die API baut, lokal starten, einen API-Key auf dem gewuenschten Tarif erzeugen
+(an der Weboberflaeche unter `/de/account/api-keys`) und exakt den in der Tabelle oben genannten
+Aufruf gegen die laufende Dev-API fahren - Ergebnis roh in die passende Datei hier schreiben.
+Danach `pnpm format`: Biome reformatiert (Einrueckung, Zeilenumbrueche), damit `pnpm lint` hier
+gruen bleibt, ohne Schluesselreihenfolge oder Werte anzufassen.
 
 Der Key gehoert nicht in diese Datei, nicht in einen Commit und nicht in eine Fehlermeldung.

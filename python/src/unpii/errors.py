@@ -1,7 +1,6 @@
 """Error type raised for any non-2xx response from the unpii API.
 
-Charter (unpii/AGENTS.md, plan docs/superpowers/plans/2026-09-07-launch-08-cli-sdk.md):
-error messages never cite the input. The same discipline applies here on the
+Charter (this repo's AGENTS.md): error messages never cite the input. The same discipline applies here on the
 client side: an `UnpiiError`'s message is built ONLY from the HTTP status and
 a validated `code` — never from the response body's message string and never
 from anything the caller passed in. A body can carry either our own error
