@@ -20,15 +20,15 @@ export interface AnonymizeOptions {
   markerFormat?: MarkerFormat;
   ambiguous?: AmbiguousMode;
   /**
-   * Honoured by Session 05 (`--keep`). Silently ignored by today's server: `AnonymizeRequest`
-   * is a non-strict zod object, so an unrecognized field is stripped, not rejected — verified
-   * against `schemas.ts` and against the running dev server (2026-09-07: sending
-   * `keep: ["DATE","URL"]` to `POST /api/v1/anonymize` returns 200 with no effect).
+   * Honoured by a later server release (`--keep`). Silently ignored by today's server:
+   * `AnonymizeRequest` is a non-strict zod object, so an unrecognized field is stripped, not
+   * rejected — verified against `schemas.ts` and against the running dev server (2026-09-07:
+   * sending `keep: ["DATE","URL"]` to `POST /api/v1/anonymize` returns 200 with no effect).
    */
   keep?: string[];
   /**
-   * Honoured by Session 07 (structure-preserving output). Silently ignored by today's server,
-   * same non-strict-object reasoning as `keep` above.
+   * Honoured by a later server release (structure-preserving output). Silently ignored by
+   * today's server, same non-strict-object reasoning as `keep` above.
    */
   structure?: string;
 }

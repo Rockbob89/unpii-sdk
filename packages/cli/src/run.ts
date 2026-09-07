@@ -165,8 +165,7 @@ interface SpanTableRow {
 
 /** Renders a plain-text table of spans WITHOUT the `original` field — that is the entire point
  * of `--scan`: show what would be found without reprinting the PII itself. Both `spans` and
- * `uncertainSpans` are included (a low-confidence span is signal, never silently dropped —
- * Charter §4). */
+ * `uncertainSpans` are included (a low-confidence span is signal, never silently dropped). */
 export function renderScanTable(
   res: {
     spans: Span[];

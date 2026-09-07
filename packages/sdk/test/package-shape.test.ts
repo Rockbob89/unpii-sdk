@@ -32,10 +32,10 @@ function readPackageJson(): PackageJson {
 
 /**
  * The README and a comment in src/client.ts both promise "a test keeps `dependencies` empty".
- * That was false until this file existed — see AGENTS.md / the review this fixes. Mirrors the
- * shape of the "package.json" describe block in packages/cli/test/cli.test.ts (which checks the
- * CLI's own `dependencies`), so the two packages' zero/one-dependency claims are guarded the same
- * way.
+ * That was false until this file existed — see AGENTS.md §2 for the promise this test enforces.
+ * Mirrors the shape of the "package.json" describe block in packages/cli/test/cli.test.ts
+ * (which checks the CLI's own `dependencies`), so the two packages' zero/one-dependency claims
+ * are guarded the same way.
  */
 describe("package.json", () => {
   it("has no runtime dependencies — the zero-dependency promise in the README", () => {

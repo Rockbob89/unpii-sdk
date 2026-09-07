@@ -98,7 +98,7 @@
       }
     },
     {
-      "name": "three fuzzy markers with a customMap (plan 02 acceptance (b))",
+      "name": "three fuzzy markers with a customMap",
       "answer": "Bitte Person 1 vor dem Datum 1 anrufen, [PHONE 1] steht in der Mail.",
       "customMap": { "DATE": "Datum", "PERSON": "Person" },
       "expect": {
