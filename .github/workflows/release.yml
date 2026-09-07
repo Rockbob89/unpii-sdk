@@ -1,0 +1,90 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: "Dry run: build and verify, publish nothing"
+        type: boolean
+        # The harmless case is the default — a manual run that forgets this flag must not ship
+        # anything. A tag push has no `inputs` context at all and is always a real release; see
+        # the `if:` conditions on the publish steps below for how the two cases are told apart.
+        default: true
+
+jobs:
+  check-versions:
+    # Every other job depends on this one — nothing builds or publishes with disagreeing
+    # versions.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Zero dependencies (fs/path only, see scripts/check-versions.js) — no pnpm/node-version
+      # setup needed beyond whatever Node ships on the runner image.
+      - run: node scripts/check-versions.js
+        # GITHUB_REF is provided by the runner automatically (refs/tags/vX.Y.Z on a tag push,
+        # refs/heads/<branch> on workflow_dispatch) — the script only compares against a tag
+        # when the ref actually is one, see check-versions.js's tagVersionFromRef.
+
+  npm:
+    needs: check-versions
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r build
+
+      # `pnpm publish`, never `npm publish`, and that choice is load-bearing: only pnpm rewrites
+      # the `workspace:*` protocol in packages/cli's dependency on @unpii/sdk to the real
+      # published version at publish time. `npm publish` would ship a package.json that still
+      # says "@unpii/sdk": "workspace:*" — meaningless, and broken, outside this monorepo.
+      # `-r` covers both workspace packages and skips the private root automatically.
+      - name: Publish (dry-run)
+        if: github.event_name != 'push' && inputs.dry-run != false
+        run: pnpm publish -r --access public --no-git-checks --dry-run
+
+      # `--provenance` needs a real OIDC exchange with the registry (the `id-token: write`
+      # permission above) — meaningless, and this job has no such exchange, in a dry run, so it
+      # is set only on the real publish.
+      - name: Publish
+        if: github.event_name == 'push' || inputs.dry-run == false
+        run: pnpm publish -r --access public --no-git-checks --provenance
+
+  pypi:
+    needs: check-versions
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: python -m pip install --upgrade build twine
+      - run: python -m build
+      - run: twine check dist/*
+
+      # Trusted Publishing: the PyPI project's publisher is configured to accept only this
+      # repo's `release.yml` workflow by filename — renaming this file breaks publishing, not
+      # just this comment.
+      - name: Publish to PyPI
+        if: github.event_name == 'push' || inputs.dry-run == false
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: python/dist
