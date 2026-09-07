@@ -129,54 +129,64 @@ describe("parseArgs()", () => {
 });
 
 describe("API_ERROR_MESSAGES / apiErrorMessage()", () => {
-  const codes = Object.keys(API_ERROR_MESSAGES);
+  const EXPECTED_CODES = [
+    "account_tier_required",
+    "tier_required",
+    "rate_limited_burst",
+    "daily_budget_exceeded",
+    "char_limit_exceeded",
+    "busy",
+    "turnstile_required",
+    "invalid_file",
+    "file_too_large",
+    "too_many_pages",
+    "encrypted_file",
+    "no_text_layer",
+    "unsupported_output_format",
+    "invalid_field",
+    "custom_rules_timeout",
+    "processing_error",
+  ].sort();
 
-  it("covers exactly the codes the server actually emits (anonymize.ts / anonymize-file.ts)", () => {
-    expect(codes.sort()).toEqual(
-      [
-        "account_tier_required",
-        "tier_required",
-        "rate_limited_burst",
-        "daily_budget_exceeded",
-        "char_limit_exceeded",
-        "busy",
-        "turnstile_required",
-        "invalid_file",
-        "file_too_large",
-        "too_many_pages",
-        "encrypted_file",
-        "no_text_layer",
-        "unsupported_output_format",
-        "invalid_field",
-        "custom_rules_timeout",
-        "processing_error",
-      ].sort(),
-    );
+  it("both languages cover exactly the codes the server actually emits (anonymize.ts / anonymize-file.ts)", () => {
+    expect(Object.keys(API_ERROR_MESSAGES.de).sort()).toEqual(EXPECTED_CODES);
+    expect(Object.keys(API_ERROR_MESSAGES.en).sort()).toEqual(EXPECTED_CODES);
   });
 
-  it("every code produces a distinct, non-empty sentence with no leaked '{' or raw code", () => {
-    const sentences = codes.map((code) => API_ERROR_MESSAGES[code]);
-    for (const [i, sentence] of sentences.entries()) {
-      expect(sentence, `code ${codes[i]}`).toBeTruthy();
-      expect(sentence, `code ${codes[i]}`).not.toContain("{");
-      // The sentence never merely echoes the wire code back at the user.
-      expect(sentence?.toLowerCase(), `code ${codes[i]}`).not.toContain(
-        (codes[i] ?? "").toLowerCase(),
-      );
-    }
-    expect(new Set(sentences).size).toBe(sentences.length);
-  });
+  it.each(["de", "en"] as const)(
+    "every %s code produces a distinct, non-empty sentence with no leaked '{' or raw code",
+    (lang) => {
+      const table = API_ERROR_MESSAGES[lang];
+      const codes = Object.keys(table);
+      const sentences = codes.map((code) => table[code]);
+      for (const [i, sentence] of sentences.entries()) {
+        expect(sentence, `${lang} code ${codes[i]}`).toBeTruthy();
+        expect(sentence, `${lang} code ${codes[i]}`).not.toContain("{");
+        // The sentence never merely echoes the wire code back at the user.
+        expect(sentence?.toLowerCase(), `${lang} code ${codes[i]}`).not.toContain(
+          (codes[i] ?? "").toLowerCase(),
+        );
+      }
+      expect(new Set(sentences).size).toBe(sentences.length);
+    },
+  );
 
-  it("an unmapped code falls back to a generic sentence naming only the HTTP status", () => {
-    const message = apiErrorMessage({ code: "totally_unknown_code", status: 503 });
-    expect(message).toContain("503");
-    expect(message).not.toContain("totally_unknown_code");
-    expect(message).not.toContain("{");
-  });
+  it.each(["de", "en"] as const)(
+    "an unmapped code falls back to a generic %s sentence naming only the HTTP status",
+    (lang) => {
+      const message = apiErrorMessage({ code: "totally_unknown_code", status: 503 }, lang);
+      expect(message).toContain("503");
+      expect(message).not.toContain("totally_unknown_code");
+      expect(message).not.toContain("{");
+    },
+  );
 
-  it("an absent code (undefined) also falls back to the generic sentence", () => {
-    const message = apiErrorMessage({ code: undefined, status: 500 });
-    expect(message).toContain("500");
-    expect(message).not.toContain("{");
-  });
+  it.each(["de", "en"] as const)(
+    "an absent code (undefined) also falls back to the generic %s sentence",
+    (lang) => {
+      const message = apiErrorMessage({ code: undefined, status: 500 }, lang);
+      expect(message).toContain("500");
+      expect(message).not.toContain("{");
+    },
+  );
 });
