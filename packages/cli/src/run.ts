@@ -31,6 +31,7 @@ import {
   restoreSummary,
   scanNotAvailableMessage,
   scanStatusLabel,
+  scanTableHeaders,
 } from "./messages.js";
 
 /**
@@ -177,7 +178,7 @@ export function renderScanTable(
     ...res.spans.map((s) => toRow(s, false)),
     ...res.uncertainSpans.map((s) => toRow(s, true)),
   ];
-  const headers = ["CATEGORY", "ID", "START", "END", "SCORE", "STATUS"];
+  const headers = scanTableHeaders(lang);
   const cells = rows.map((r) => [
     r.category,
     String(r.id),

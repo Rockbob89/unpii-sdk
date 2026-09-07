@@ -101,11 +101,24 @@ function unknownErrorMessage(status: number, lang: Lang): string {
 
 /** The STATUS cell in `--scan`'s table (`run.ts`'s `renderScanTable`), per span: whether it fell
  * into `uncertainSpans` (a low-confidence span is signal, never silently dropped) or into
- * `spans` proper. A later pass bilingualized every other CLI message; this one was left
- * hardcoded to German ("unsicher"/"sicher") under an otherwise-English table header row. */
+ * `spans` proper. Sits under the header row `scanTableHeaders` builds below — both are
+ * translated together, so the column and its header never disagree on language. */
 export function scanStatusLabel(uncertain: boolean, lang: Lang = resolveLang(process.env)): string {
   if (lang === "de") return uncertain ? "unsicher" : "sicher";
   return uncertain ? "uncertain" : "confirmed";
+}
+
+/** The six column headers of `--scan`'s table (`run.ts`'s `renderScanTable`). Translated for the
+ * same reason every other CLI string in this file is: the STATUS cells underneath (see
+ * `scanStatusLabel` above) are already translated, and a translated column under an
+ * untranslated English header row is only half-finished — the same argument that moved the
+ * messages in args.ts/run.ts/cli.ts into `{ de, en }` pairs applies here too. Four of the six
+ * cells are identical in both languages on purpose: ID, START, SCORE, and STATUS are exactly
+ * these words in German technical usage as well, not a missed translation. */
+export function scanTableHeaders(lang: Lang = resolveLang(process.env)): string[] {
+  return lang === "de"
+    ? ["KATEGORIE", "ID", "START", "ENDE", "SCORE", "STATUS"]
+    : ["CATEGORY", "ID", "START", "END", "SCORE", "STATUS"];
 }
 
 /** Printed to stderr, exit 1, when `--scan` hits a bare HTTP 404 on `/api/v1/scan` — the route
