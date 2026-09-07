@@ -47,9 +47,8 @@ type DetectedFormat = "docx" | "pdf" | "text";
 
 /**
  * Detects the input format from BOTH the extension and the first bytes — the extension is a
- * claim, the bytes are the evidence. Mirrors the server's own sniff exactly
- * (`apps/api/src/routes/anonymize-file.ts`'s `sniffFormat`: "PK" for docx, "%PDF-" for pdf).
- * When the two disagree, the bytes win.
+ * claim, the bytes are the evidence. Mirrors the server's own sniff exactly ("PK" for docx,
+ * "%PDF-" for pdf). When the two disagree, the bytes win.
  */
 export function detectFormat(bytes: Buffer, path: string | undefined): DetectedFormat {
   const byBytes = sniffBytes(bytes);
@@ -287,12 +286,12 @@ async function runMain(args: RunArgs, env: NodeJS.ProcessEnv, io: RunIO): Promis
 
   const format = detectFormat(bytes, args.path);
 
-  // A .docx input always comes back as a full rebuilt document (grounding:
-  // apps/api/src/routes/anonymize-file.ts — .docx has no text-output mode, unlike PDF, which
-  // an API-key caller gets as plain text by default). Without --out there is nowhere to put
+  // A .docx input always comes back as a full rebuilt document (grounding: the server's own
+  // route — .docx has no text-output mode, unlike PDF, which an API-key caller gets as plain
+  // text by default). Without --out there is nowhere to put
   // that document, and without --json there is no envelope to inspect instead, so the call
   // could never have succeeded — the format is already known from the magic bytes, so this
-  // fails before any request is sent. Mirrors the server's own gate order (same file, header
+  // fails before any request is sent. Mirrors the server's own gate order (its route's header
   // comment): validation fires before the rate-limit check so a request that was always going
   // to be rejected never burns the caller's daily budget.
   if (format === "docx" && !args.scan && !args.json && args.out === undefined) {

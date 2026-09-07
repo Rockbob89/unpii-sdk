@@ -14,8 +14,8 @@ function readContract(): OpenAPI3 {
 describe("renderTypes()", () => {
   it("matches the checked-in src/types.generated.ts byte for byte", async () => {
     // This is the drift guard: a change to contract/openapi.json that isn't followed by
-    // `pnpm --filter @unpii/sdk gen:types` turns this red. Mirrors
-    // apps/inference/tests/test_contract_parity.py in the main unpii monorepo.
+    // `pnpm --filter @unpii/sdk gen:types` turns this red. Mirrors the contract-parity check
+    // the server side runs in its own CI to keep its Python mirror of this same contract honest.
     const checkedIn = readFileSync(GENERATED_PATH, "utf8");
     const rendered = await renderTypes(readContract());
     expect(rendered).toBe(checkedIn);

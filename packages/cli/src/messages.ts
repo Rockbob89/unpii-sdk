@@ -43,9 +43,9 @@ export function outRequiredForDocumentMessage(lang: Lang = resolveLang(process.e
 
 /**
  * One sentence per API error code, keyed on `error.code` from the server — never on the
- * response body's `message`, and never on the caller's input. Codes are the exact set emitted by
- * `apps/api/src/routes/anonymize.ts` and `apps/api/src/routes/anonymize-file.ts` (verified by
- * reading both files, 2026-09-07). An unmapped or absent code falls back to
+ * response body's `message`, and never on the caller's input. Codes are the exact set the
+ * server's `/anonymize` and `/anonymize-file` routes emit (verified by reading the server
+ * source, 2026-09-07). An unmapped or absent code falls back to
  * `unknownErrorMessage` below, which names only the HTTP status.
  *
  * Both languages carry EXACTLY the same key set (checked by `messages.test.ts`'s key-set

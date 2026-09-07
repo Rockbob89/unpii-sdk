@@ -16,8 +16,9 @@
  * than a hand-copied shape.
  *
  * Run `pnpm --filter @unpii/sdk gen:types` after `contract/openapi.json` changes.
- * `test/gen-types.test.ts` fails until that's done — the drift guard, mirroring
- * `apps/inference/tests/test_contract_parity.py` in the main unpii monorepo.
+ * `test/gen-types.test.ts` fails until that's done — the drift guard, mirroring the
+ * contract-parity check the server side runs in its own CI to keep its Python mirror of this
+ * same contract honest.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
