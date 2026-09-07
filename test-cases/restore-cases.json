@@ -1,0 +1,277 @@
+{
+  "_note": "Authored test INPUT, not an API capture. `spans` is copied from the real server response in fixtures/anonymize.docs.json (see that file's provenance in fixtures/README.md); `cases` and every `expect` block below were worked out BY HAND against the restore() contract in AGENTS.md / the launch-08 plan, then verified against the actual implementation. Both packages/sdk/test/restore.test.ts (TypeScript) and the parity test for the Python port in the sibling clients repo read this same file, so changing an `expect` value here changes the specified behaviour of BOTH restore() implementations, not just a test fixture — treat an edit to this file the same as an edit to the contract itself.",
+  "spans": [
+    {
+      "start": 13,
+      "end": 25,
+      "category": "PERSON",
+      "id": 1,
+      "original": "Anne Schmitz",
+      "score": 0.999768927693367
+    },
+    { "start": 33, "end": 43, "category": "DATE", "id": 1, "original": "15.03.2026", "score": 1 },
+    {
+      "start": 73,
+      "end": 102,
+      "category": "EMAIL",
+      "id": 1,
+      "original": "anne.schmitz@beispiel-gmbh.de",
+      "score": 1
+    },
+    {
+      "start": 108,
+      "end": 122,
+      "category": "PHONE",
+      "id": 1,
+      "original": "+49 89 9876543",
+      "score": 0.9999014139175415
+    },
+    {
+      "start": 130,
+      "end": 163,
+      "category": "ADDRESS",
+      "id": 1,
+      "original": "Schellingstraße 42, 80799 München",
+      "score": 1
+    },
+    {
+      "start": 179,
+      "end": 215,
+      "category": "URL",
+      "id": 1,
+      "original": "https://beispiel-gmbh.de/projekte/qr",
+      "score": 1
+    },
+    {
+      "start": 221,
+      "end": 243,
+      "category": "ACCOUNT",
+      "id": 1,
+      "original": "DE12500105170648489890",
+      "score": 1
+    },
+    {
+      "start": 262,
+      "end": 278,
+      "category": "ACCOUNT",
+      "id": 2,
+      "original": "RECH-2026-003291",
+      "score": 1
+    },
+    {
+      "start": 294,
+      "end": 330,
+      "category": "SECRET",
+      "id": 1,
+      "original": "sk_test_aBcDeFgHiJkLmNoPqRsTuVwXyZ12",
+      "score": 1
+    },
+    {
+      "start": 337,
+      "end": 349,
+      "category": "PERSON",
+      "id": 2,
+      "original": "hans schmidt",
+      "score": 0.9832428991794586
+    }
+  ],
+  "cases": [
+    {
+      "name": "two exact markers",
+      "answer": "Bitte [PERSON_1] vor dem [DATE_1] anrufen.",
+      "customMap": null,
+      "expect": {
+        "text": "Bitte Anne Schmitz vor dem 15.03.2026 anrufen.",
+        "exact": 2,
+        "fuzzy": 0,
+        "missing": [
+          "[EMAIL_1]",
+          "[PHONE_1]",
+          "[ADDRESS_1]",
+          "[URL_1]",
+          "[ACCOUNT_1]",
+          "[ACCOUNT_2]",
+          "[SECRET_1]",
+          "[PERSON_2]"
+        ],
+        "unknown": []
+      }
+    },
+    {
+      "name": "three fuzzy markers with a customMap (plan 02 acceptance (b))",
+      "answer": "Bitte Person 1 vor dem Datum 1 anrufen, [PHONE 1] steht in der Mail.",
+      "customMap": { "DATE": "Datum", "PERSON": "Person" },
+      "expect": {
+        "text": "Bitte Anne Schmitz vor dem 15.03.2026 anrufen, +49 89 9876543 steht in der Mail.",
+        "exact": 0,
+        "fuzzy": 3,
+        "missing": [
+          "[EMAIL_1]",
+          "[ADDRESS_1]",
+          "[URL_1]",
+          "[ACCOUNT_1]",
+          "[ACCOUNT_2]",
+          "[SECRET_1]",
+          "[Person_2]"
+        ],
+        "unknown": []
+      }
+    },
+    {
+      "name": "same answer WITHOUT the customMap: Datum 1 is plain text, PERSON still matches case-insensitively",
+      "answer": "Bitte Person 1 vor dem Datum 1 anrufen, [PHONE 1] steht in der Mail.",
+      "customMap": null,
+      "expect": {
+        "text": "Bitte Anne Schmitz vor dem Datum 1 anrufen, +49 89 9876543 steht in der Mail.",
+        "exact": 0,
+        "fuzzy": 2,
+        "missing": [
+          "[DATE_1]",
+          "[EMAIL_1]",
+          "[ADDRESS_1]",
+          "[URL_1]",
+          "[ACCOUNT_1]",
+          "[ACCOUNT_2]",
+          "[SECRET_1]",
+          "[PERSON_2]"
+        ],
+        "unknown": []
+      }
+    },
+    {
+      "name": "no real markers, one unknown marker-shaped token (plan acceptance (c))",
+      "answer": "Die Kundin ruft morgen an. [PERSON_9] auch.",
+      "customMap": null,
+      "expect": {
+        "text": "Die Kundin ruft morgen an. [PERSON_9] auch.",
+        "exact": 0,
+        "fuzzy": 0,
+        "missing": [
+          "[PERSON_1]",
+          "[DATE_1]",
+          "[EMAIL_1]",
+          "[PHONE_1]",
+          "[ADDRESS_1]",
+          "[URL_1]",
+          "[ACCOUNT_1]",
+          "[ACCOUNT_2]",
+          "[SECRET_1]",
+          "[PERSON_2]"
+        ],
+        "unknown": ["[PERSON_9]"]
+      }
+    },
+    {
+      "name": "PERSON_1 must not match inside PERSON_12",
+      "answer": "Bitte kontaktiere PERSON_12 wegen des Vertrags.",
+      "customMap": null,
+      "expect": {
+        "text": "Bitte kontaktiere PERSON_12 wegen des Vertrags.",
+        "exact": 0,
+        "fuzzy": 0,
+        "missing": [
+          "[PERSON_1]",
+          "[DATE_1]",
+          "[EMAIL_1]",
+          "[PHONE_1]",
+          "[ADDRESS_1]",
+          "[URL_1]",
+          "[ACCOUNT_1]",
+          "[ACCOUNT_2]",
+          "[SECRET_1]",
+          "[PERSON_2]"
+        ],
+        "unknown": ["PERSON_12"]
+      }
+    },
+    {
+      "name": "lower-case marker is fuzzy, upper-case marker is exact",
+      "answer": "bitte [person_1] pruefen, dann [PERSON_2] auch.",
+      "customMap": null,
+      "expect": {
+        "text": "bitte Anne Schmitz pruefen, dann hans schmidt auch.",
+        "exact": 1,
+        "fuzzy": 1,
+        "missing": [
+          "[DATE_1]",
+          "[EMAIL_1]",
+          "[PHONE_1]",
+          "[ADDRESS_1]",
+          "[URL_1]",
+          "[ACCOUNT_1]",
+          "[ACCOUNT_2]",
+          "[SECRET_1]"
+        ],
+        "unknown": []
+      }
+    },
+    {
+      "name": "empty answer",
+      "answer": "",
+      "customMap": null,
+      "expect": {
+        "text": "",
+        "exact": 0,
+        "fuzzy": 0,
+        "missing": [
+          "[PERSON_1]",
+          "[DATE_1]",
+          "[EMAIL_1]",
+          "[PHONE_1]",
+          "[ADDRESS_1]",
+          "[URL_1]",
+          "[ACCOUNT_1]",
+          "[ACCOUNT_2]",
+          "[SECRET_1]",
+          "[PERSON_2]"
+        ],
+        "unknown": []
+      }
+    },
+    {
+      "name": "a restored original that is itself marker-shaped must not be flagged unknown (proves the scan runs on the answer, not the output)",
+      "answer": "Referenz: [ACCOUNT_2].",
+      "customMap": null,
+      "expect": {
+        "text": "Referenz: RECH-2026-003291.",
+        "exact": 1,
+        "fuzzy": 0,
+        "missing": [
+          "[PERSON_1]",
+          "[DATE_1]",
+          "[EMAIL_1]",
+          "[PHONE_1]",
+          "[ADDRESS_1]",
+          "[URL_1]",
+          "[ACCOUNT_1]",
+          "[SECRET_1]",
+          "[PERSON_2]"
+        ],
+        "unknown": []
+      }
+    },
+    {
+      "name": "umlaut boundary: a letter glued directly onto the label blocks the match, even a non-ASCII one (proves the boundary check uses \\p{L}, not the ASCII-only \\w)",
+      "answer": "Termin: üADDRESS_1 geplant.",
+      "customMap": null,
+      "expect": {
+        "text": "Termin: üADDRESS_1 geplant.",
+        "exact": 0,
+        "fuzzy": 0,
+        "missing": [
+          "[PERSON_1]",
+          "[DATE_1]",
+          "[EMAIL_1]",
+          "[PHONE_1]",
+          "[ADDRESS_1]",
+          "[URL_1]",
+          "[ACCOUNT_1]",
+          "[ACCOUNT_2]",
+          "[SECRET_1]",
+          "[PERSON_2]"
+        ],
+        "unknown": ["ADDRESS_1"]
+      }
+    }
+  ]
+}

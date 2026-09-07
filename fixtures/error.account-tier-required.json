@@ -1,0 +1,8 @@
+{
+  "error": {
+    "code": "account_tier_required",
+    "message": "API access requires a paid plan. Your key is preserved — re-upgrading reactivates it.",
+    "tier": "free",
+    "channel": "api"
+  }
+}
