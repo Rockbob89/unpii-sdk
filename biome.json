@@ -1,7 +1,14 @@
 {
   "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
   "files": {
-    "ignore": ["node_modules", "dist", "pnpm-lock.yaml", "python", "**/.venv"]
+    "ignore": [
+      "node_modules",
+      "dist",
+      "pnpm-lock.yaml",
+      "python",
+      "**/.venv",
+      "packages/sdk/src/types.generated.ts"
+    ]
   },
   "formatter": {
     "enabled": true,

@@ -1,0 +1,2387 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "anonymize API",
+    "version": "0.1.0",
+    "description": "Privacy-first PII redaction API. v1 contract."
+  },
+  "servers": [
+    {
+      "url": "https://anonymize.example",
+      "description": "production (placeholder)"
+    },
+    {
+      "url": "http://localhost:3001",
+      "description": "local dev"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "ApiKey": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "API key (format: ak_*)"
+      },
+      "Session": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "anonymize_session"
+      }
+    },
+    "schemas": {
+      "AnonymizeRequest": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1500000
+          },
+          "markerFormat": {
+            "type": "string",
+            "enum": ["default", "custom", "xxxxx", "blackbar"]
+          },
+          "turnstile_token": {
+            "type": "string"
+          },
+          "ambiguous": {
+            "type": "string",
+            "enum": ["redact", "keep", "mark"],
+            "default": "redact"
+          },
+          "customMarkerMap": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["text"]
+      },
+      "AnonymizeResponse": {
+        "type": "object",
+        "properties": {
+          "anonymized": {
+            "type": "string"
+          },
+          "spans": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "start": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "end": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "category": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "exclusiveMinimum": true
+                },
+                "original": {
+                  "type": "string"
+                },
+                "score": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              },
+              "required": ["start", "end", "category", "id", "original"]
+            }
+          },
+          "uncertainSpans": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "start": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "end": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "category": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "exclusiveMinimum": true
+                },
+                "original": {
+                  "type": "string"
+                },
+                "score": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              },
+              "required": ["start", "end", "category", "id", "original"]
+            }
+          },
+          "stats": {
+            "type": "object",
+            "properties": {
+              "request_id": {
+                "type": "string"
+              },
+              "processed_chars": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "servedBy": {
+                "type": "string",
+                "enum": ["slow", "fast", "gpu"]
+              }
+            },
+            "required": ["request_id", "processed_chars", "servedBy"]
+          }
+        },
+        "required": ["anonymized", "spans", "uncertainSpans", "stats"]
+      },
+      "AnonymizeFileResponse": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "mimeType": {
+                "type": "string"
+              },
+              "contentBase64": {
+                "type": "string"
+              }
+            },
+            "required": ["name", "mimeType", "contentBase64"]
+          },
+          "spans": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "start": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "end": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "category": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "exclusiveMinimum": true
+                },
+                "original": {
+                  "type": "string"
+                },
+                "score": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              },
+              "required": ["start", "end", "category", "id", "original"]
+            }
+          },
+          "uncertainSpans": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "start": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "end": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "category": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "exclusiveMinimum": true
+                },
+                "original": {
+                  "type": "string"
+                },
+                "score": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              },
+              "required": ["start", "end", "category", "id", "original"]
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "detail": {
+                  "type": "string"
+                }
+              },
+              "required": ["code", "detail"]
+            }
+          },
+          "stats": {
+            "type": "object",
+            "properties": {
+              "request_id": {
+                "type": "string"
+              },
+              "extractedChars": {
+                "type": "number"
+              },
+              "servedBy": {
+                "type": "string"
+              }
+            },
+            "required": ["request_id", "extractedChars", "servedBy"]
+          }
+        },
+        "required": ["file", "spans", "uncertainSpans", "warnings", "stats"]
+      },
+      "AnonymizeFileTextResponse": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "spans": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "start": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "end": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "category": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "exclusiveMinimum": true
+                },
+                "original": {
+                  "type": "string"
+                },
+                "score": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              },
+              "required": ["start", "end", "category", "id", "original"]
+            }
+          },
+          "uncertainSpans": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "start": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "end": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "category": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "exclusiveMinimum": true
+                },
+                "original": {
+                  "type": "string"
+                },
+                "score": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              },
+              "required": ["start", "end", "category", "id", "original"]
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "detail": {
+                  "type": "string"
+                }
+              },
+              "required": ["code", "detail"]
+            }
+          },
+          "stats": {
+            "type": "object",
+            "properties": {
+              "request_id": {
+                "type": "string"
+              },
+              "extractedChars": {
+                "type": "number"
+              },
+              "servedBy": {
+                "type": "string"
+              }
+            },
+            "required": ["request_id", "extractedChars", "servedBy"]
+          }
+        },
+        "required": ["text", "spans", "uncertainSpans", "warnings", "stats"]
+      },
+      "MagicLinkRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 320,
+            "format": "email"
+          },
+          "turnstile_token": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          },
+          "website": {
+            "type": "string",
+            "maxLength": 0
+          },
+          "lang": {
+            "type": "string",
+            "enum": ["de", "en"]
+          },
+          "intent": {
+            "type": "string",
+            "description": "An unrecognized value is accepted and dropped (parsed as absent), never rejected with 400.",
+            "enum": ["trial"]
+          }
+        },
+        "required": ["email", "turnstile_token"]
+      },
+      "UserPublic": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "emailVerifiedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string",
+            "enum": ["de", "en"]
+          },
+          "theme": {
+            "type": "string",
+            "enum": ["light", "dark", "system"]
+          },
+          "markerFormat": {
+            "type": "string",
+            "enum": ["default", "custom", "xxxxx", "blackbar"]
+          },
+          "customMarkerMap": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "tier": {
+            "type": "string",
+            "enum": ["free", "docs", "api", "pro", "ultra"]
+          },
+          "isAdmin": {
+            "type": "boolean"
+          },
+          "subscription": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "interval": {
+                "type": "string",
+                "enum": ["monthly", "annual"]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "active",
+                  "trialing",
+                  "paused",
+                  "past_due",
+                  "canceled",
+                  "scheduled_cancel",
+                  "expired",
+                  "incomplete",
+                  "unpaid"
+                ]
+              },
+              "cancelAt": {
+                "type": "string",
+                "nullable": true
+              },
+              "ordinaryCancelEffectDate": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": ["interval", "status", "cancelAt", "ordinaryCancelEffectDate"]
+          },
+          "trial": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "tier": {
+                "type": "string",
+                "enum": ["docs", "api", "pro"]
+              },
+              "endsAt": {
+                "type": "string"
+              }
+            },
+            "required": ["tier", "endsAt"]
+          },
+          "trialAvailable": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "emailVerifiedAt",
+          "createdAt",
+          "language",
+          "theme",
+          "markerFormat",
+          "customMarkerMap",
+          "tier",
+          "isAdmin",
+          "subscription",
+          "trial",
+          "trialAvailable"
+        ]
+      },
+      "UserUpdate": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string",
+            "enum": ["de", "en"]
+          },
+          "theme": {
+            "type": "string",
+            "enum": ["light", "dark", "system"]
+          },
+          "markerFormat": {
+            "type": "string",
+            "enum": ["default", "custom", "xxxxx", "blackbar"]
+          },
+          "customMarkerMap": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ApiKeyCreateRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          }
+        },
+        "required": ["name"]
+      },
+      "ApiKeyCreateResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "lastUsedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "revokedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "key": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "name", "createdAt", "lastUsedAt", "revokedAt", "key"]
+      },
+      "ApiKeyPublic": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "lastUsedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "revokedAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": ["id", "name", "createdAt", "lastUsedAt", "revokedAt"]
+      },
+      "DeleteAccountRequest": {
+        "type": "object",
+        "properties": {
+          "confirm": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": ["confirm"]
+      },
+      "LimitsResponse": {
+        "type": "object",
+        "properties": {
+          "current": {
+            "type": "object",
+            "properties": {
+              "tier": {
+                "type": "string",
+                "enum": ["anon", "free", "docs", "api", "pro", "ultra"]
+              },
+              "channel": {
+                "type": "string",
+                "enum": ["web", "api"]
+              },
+              "daily_limit": {
+                "type": "integer"
+              },
+              "entitled": {
+                "type": "boolean"
+              }
+            },
+            "required": ["tier", "channel", "daily_limit", "entitled"]
+          },
+          "reference": {
+            "type": "object",
+            "properties": {
+              "web": {
+                "type": "object",
+                "properties": {
+                  "anon": {
+                    "type": "integer"
+                  },
+                  "free": {
+                    "type": "integer"
+                  },
+                  "docs": {
+                    "type": "integer"
+                  },
+                  "api": {
+                    "type": "integer"
+                  },
+                  "pro": {
+                    "type": "integer"
+                  },
+                  "ultra": {
+                    "type": "integer"
+                  }
+                },
+                "required": ["anon", "free", "docs", "api", "pro", "ultra"]
+              },
+              "api": {
+                "type": "object",
+                "properties": {
+                  "free": {
+                    "type": "integer"
+                  },
+                  "docs": {
+                    "type": "integer"
+                  },
+                  "api": {
+                    "type": "integer"
+                  },
+                  "pro": {
+                    "type": "integer"
+                  },
+                  "ultra": {
+                    "type": "integer"
+                  }
+                },
+                "required": ["free", "docs", "api", "pro", "ultra"]
+              }
+            },
+            "required": ["web", "api"]
+          },
+          "burst": {
+            "type": "object",
+            "properties": {
+              "magic_link_per_hour": {
+                "type": "integer"
+              }
+            },
+            "required": ["magic_link_per_hour"]
+          },
+          "anonymize": {
+            "type": "object",
+            "properties": {
+              "anonymous_per_day": {
+                "type": "integer"
+              },
+              "user_per_day": {
+                "type": "integer"
+              },
+              "apikey_per_day": {
+                "type": "integer"
+              }
+            },
+            "required": ["anonymous_per_day", "user_per_day", "apikey_per_day"]
+          },
+          "auth": {
+            "type": "object",
+            "properties": {
+              "magic_link_per_hour": {
+                "type": "integer"
+              }
+            },
+            "required": ["magic_link_per_hour"]
+          }
+        },
+        "required": ["current", "reference", "burst", "anonymize", "auth"]
+      },
+      "CustomRedactionRule": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "pattern": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "category": {
+            "type": "string",
+            "enum": ["PERSON", "EMAIL", "PHONE", "ADDRESS", "DATE", "URL", "ACCOUNT", "SECRET"]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "name", "pattern", "category", "enabled", "createdAt"]
+      },
+      "CustomRedactionRuleCreate": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "pattern": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "category": {
+            "type": "string",
+            "enum": ["PERSON", "EMAIL", "PHONE", "ADDRESS", "DATE", "URL", "ACCOUNT", "SECRET"]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 200
+          }
+        },
+        "required": ["name", "pattern", "category", "enabled"]
+      },
+      "CustomRedactionRuleUpdate": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "pattern": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "category": {
+            "type": "string",
+            "enum": ["PERSON", "EMAIL", "PHONE", "ADDRESS", "DATE", "URL", "ACCOUNT", "SECRET"]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 200
+          }
+        }
+      },
+      "AllowlistEntry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "caseSensitive": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "value", "caseSensitive", "enabled", "createdAt"]
+      },
+      "AllowlistEntryCreate": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "caseSensitive": {
+            "type": "boolean",
+            "default": true
+          },
+          "enabled": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": ["value"]
+      },
+      "AllowlistEntryUpdate": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "caseSensitive": {
+            "type": "boolean",
+            "default": true
+          },
+          "enabled": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "BillingCheckoutRequest": {
+        "type": "object",
+        "properties": {
+          "plan": {
+            "type": "string",
+            "enum": ["docs", "api", "pro"]
+          },
+          "interval": {
+            "type": "string",
+            "enum": ["monthly", "annual"]
+          }
+        },
+        "required": ["plan", "interval"]
+      },
+      "BillingCheckoutResponse": {
+        "type": "object",
+        "properties": {
+          "checkoutUrl": {
+            "type": "string"
+          },
+          "offerId": {
+            "type": "string"
+          },
+          "customerEmail": {
+            "type": "string"
+          },
+          "customFields": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["checkoutUrl", "offerId", "customerEmail", "customFields"]
+      },
+      "BillingPortalResponse": {
+        "type": "object",
+        "properties": {
+          "portalUrl": {
+            "type": "string"
+          }
+        },
+        "required": ["portalUrl"]
+      },
+      "BillingPlanChangeRequest": {
+        "type": "object",
+        "properties": {
+          "plan": {
+            "type": "string",
+            "enum": ["docs", "api", "pro"]
+          },
+          "interval": {
+            "type": "string",
+            "enum": ["monthly", "annual"]
+          }
+        },
+        "required": ["plan", "interval"]
+      },
+      "BillingPlanPreviewResponse": {
+        "type": "object",
+        "properties": {
+          "immediateCharge": {
+            "type": "string",
+            "nullable": true
+          },
+          "immediateCredit": {
+            "type": "string",
+            "nullable": true
+          },
+          "nextBilledAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "nextBilledAmount": {
+            "type": "string",
+            "nullable": true
+          },
+          "currencyCode": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "immediateCharge",
+          "immediateCredit",
+          "nextBilledAt",
+          "nextBilledAmount",
+          "currencyCode"
+        ]
+      },
+      "BillingPlanChangeResponse": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "enum": [true]
+          }
+        },
+        "required": ["ok"]
+      },
+      "CancellationRequest": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["ordinary", "extraordinary"],
+            "default": "ordinary"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 320,
+            "format": "email"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "requestedEffectDate": {
+            "type": "string"
+          },
+          "lang": {
+            "type": "string",
+            "enum": ["de", "en"]
+          }
+        },
+        "required": ["email"]
+      },
+      "CancellationResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "receivedAt": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["ordinary", "extraordinary"]
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "requestedEffectDate": {
+            "type": "string",
+            "nullable": true
+          },
+          "effectDate": {
+            "type": "string",
+            "nullable": true
+          },
+          "autoExecuted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "receivedAt",
+          "type",
+          "reason",
+          "email",
+          "name",
+          "requestedEffectDate",
+          "effectDate",
+          "autoExecuted"
+        ]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/api/v1/anonymize": {
+      "post": {
+        "description": "Anonymize text: detect PII spans and return the rendered `anonymized` field plus the structured spans for client-side customization. The optional `markerFormat` selects the render format; tier gating applies (Free: xxxxx/blackbar; paid tiers Docs/API/Pro/Ultra: also `default`; Pro/Ultra additionally: `custom`). Omit `markerFormat` to fall back to the caller's user-profile preference, then to the tier default. The optional `ambiguous` field controls how low-confidence detections (the UNKLAR/ambiguous layer) render in `anonymized`: `redact` (default) splices them in as `[UNKLAR_n]` \u2014 masked formats (xxxxx/blackbar) mask them exactly like any other span; `mark` inlines the original text alongside the marker as `[UNKLAR_n: original]`; `keep` leaves them as plaintext, the legacy behavior. `redact` is the default because uncertain detections used to reach every caller as plaintext regardless of tier \u2014 a leak this field closes; older or generic callers that omit it get the safe default automatically. `uncertainSpans` (offsets, category, score) is returned in ALL three modes, unaffected by this field. Its `id` is a per-category preview counter independent of the `[UNKLAR_n]` numbering in `anonymized` (that one runs under a single shared `UNKLAR` label) \u2014 correlate an `uncertainSpans[]` entry to its marker in the text (or vice versa) by `start`/`end`, which is exact and present in both regardless of mode.",
+        "summary": "Anonymize text",
+        "tags": ["anonymize"],
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "Session": []
+          },
+          {}
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnonymizeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Anonymized result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnonymizeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Two distinct cases: (1) `code: 'turnstile_required'` \u2014 an anonymous request needs a Cloudflare Turnstile token (or a valid IP-bound verified cookie); signed-in and API-key callers never see this one; carries `message`. (2) `code: 'invalid_api_key'` \u2014 the Authorization header named a key that is malformed, unknown, or revoked; no `reason` (an attacker should not learn whether a key ever existed) and no `message`. Distinct from `account_tier_required` below: this is about the key itself, not the plan behind it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": ["turnstile_required"]
+                            },
+                            {
+                              "type": "string",
+                              "enum": ["invalid_api_key"]
+                            }
+                          ]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["code"]
+                    }
+                  },
+                  "required": ["error"]
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Tier required. Two distinct cases: (1) `code: 'tier_required'` \u2014 the requested `markerFormat` is not available on the caller's tier (body adds `markerFormat`, `tier`); (2) `code: 'account_tier_required'` \u2014 the API key is valid, but the account it belongs to has no API access on the Free plan (body adds `tier: 'free'`, `channel: 'api'`). The key itself is not revoked - upgrading the account to Docs or above reactivates it."
+          },
+          "413": {
+            "description": "Text exceeds the caller's tier char limit"
+          },
+          "422": {
+            "description": "`code: 'custom_rules_timeout'` \u2014 one or more of the caller's active custom rules exceeded the anonymize-time processing budget against this request's text (defense in depth: a pattern that passed save-time validation but still backtracks catastrophically at runtime). Fails closed \u2014 the request is rejected rather than silently completing with custom rules skipped. Review and adjust the offending custom rule(s); the response never names the pattern or request text."
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/anonymize-file": {
+      "post": {
+        "description": "Anonymize a Word document (.docx, max 10 MB) or a PDF (.pdf, max 20 MB and 500 pages). The output is always rebuilt from scratch with all detected PII replaced by markers \u2014 only deliberately extracted content reaches it, so hidden data (comments, tracked changes, metadata, embedded objects) is removed by construction, and no original content stream survives underneath a redaction.\n\n**PDF input** is read through its text layer and returned as paragraphs and page breaks. Layout, tables, columns, headers/footers and images are NOT preserved \u2014 tables and columns come back as ordinary paragraphs in reading order, and every PDF response carries a `pdf_layout_flattened` warning saying so. A scanned PDF with no text layer is rejected (`no_text_layer`); there is no OCR.\n\nMultipart upload with a `file` part, an optional `markerFormat` field (same tier gating as /anonymize), an optional `redactUncertain` field, and an optional `outputFormat` field. Send every field BEFORE the file part \u2014 fields after the file are not reliably parsed. Requires a paid plan (Docs and up); anonymous callers are rejected. Degradations (omitted footnotes, merged cells, flattened PDF layout, ...) are reported honestly in `warnings`.\n\n`redactUncertain` is `\"true\"` | `\"false\"` (strict \u2014 any other value 400s), default `\"false\"`: when `\"true\"`, low-confidence detections are ALSO replaced in the output; either way they are always listed in `uncertainSpans` for review.\n\n`outputFormat` is `\"docx\"` | `\"text\"` (strict) and applies to PDF input only. It defaults to `\"text\"` on the API-key channel and `\"docx\"` on the browser channel. With `\"text\"` the response carries the anonymized string instead of a file, pages separated by a form feed (`\\f`, the pdftotext convention). A .docx upload has real structure to preserve and therefore has no text mode: asking for one returns 400 `unsupported_output_format`.",
+        "summary": "Anonymize a .docx or .pdf file",
+        "tags": ["anonymize"],
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "Session": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "markerFormat": {
+                    "type": "string",
+                    "enum": ["default", "xxxxx", "blackbar", "custom"]
+                  },
+                  "redactUncertain": {
+                    "type": "string",
+                    "enum": ["true", "false"],
+                    "description": "Also replace low-confidence detections in the output. Default \"false\" when omitted."
+                  },
+                  "outputFormat": {
+                    "type": "string",
+                    "enum": ["docx", "text"],
+                    "description": "PDF input only. Default \"text\" for API-key callers, \"docx\" for session callers. Rejected with 400 for .docx input."
+                  }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Redacted document + span report, or \u2014 for PDF input with `outputFormat=text` \u2014 the anonymized text + span report. Which shape arrives is decided by `outputFormat`, so a client that never sends it always gets the one its channel defaults to.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/AnonymizeFileResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AnonymizeFileTextResponse"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Not a valid .docx or .pdf (`invalid_file`; PDF parse failures carry `reason: \"INVALID_PDF\"`), missing file part, `redactUncertain`/`outputFormat` sent as an unsupported value (`invalid_field`), or `outputFormat=text` requested for .docx input (`unsupported_output_format`)"
+          },
+          "401": {
+            "description": "Two distinct cases: (1) no Authorization header and no session cookie at all \u2014 files require an account, there is no anonymous upload; body is `{ error: { message: 'unauthenticated' } }`. (2) `code: 'invalid_api_key'` \u2014 the Authorization header named a key that is malformed, unknown, or revoked; body is `{ error: { code: 'invalid_api_key' } }`. No `reason` in either body.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "message": {
+                              "type": "string",
+                              "enum": ["unauthenticated"]
+                            }
+                          },
+                          "required": ["message"]
+                        }
+                      },
+                      "required": ["error"]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "object",
+                          "properties": {
+                            "code": {
+                              "type": "string",
+                              "enum": ["invalid_api_key"]
+                            }
+                          },
+                          "required": ["code"]
+                        }
+                      },
+                      "required": ["error"]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Tier required: Free-tier callers (`required: 'docs'`), or the requested `markerFormat` is not available on the caller's tier"
+          },
+          "413": {
+            "description": "File exceeds the cap for its format (`file_too_large`, with the applicable `limit`), the PDF has more pages than allowed (`too_many_pages`, with `limit` and `actual`), or the extracted text exceeds the tier char limit (`char_limit_exceeded`)"
+          },
+          "422": {
+            "description": "Password-protected/encrypted document (`encrypted_file`), or a PDF with no text layer \u2014 a scan (`no_text_layer`). Neither is retryable, and there is no OCR path."
+          },
+          "429": {
+            "description": "Rate limit exceeded (shared daily budget with /anonymize)"
+          },
+          "503": {
+            "description": "Processing at capacity or inference unavailable \u2014 retry later"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/magic-link": {
+      "post": {
+        "description": "Request a magic-link sign-in email. Always returns 202 to prevent user enumeration.",
+        "summary": "Request magic-link",
+        "tags": ["auth"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MagicLinkRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Request accepted"
+          }
+        }
+      }
+    },
+    "/api/v1/users/me": {
+      "get": {
+        "description": "Current authenticated user.",
+        "summary": "Get current user",
+        "tags": ["users"],
+        "security": [
+          {
+            "Session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPublic"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          }
+        }
+      },
+      "patch": {
+        "description": "Update current user preferences (language, theme, marker format, custom marker map).",
+        "summary": "Update current user",
+        "tags": ["users"],
+        "security": [
+          {
+            "Session": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPublic"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          }
+        }
+      },
+      "delete": {
+        "description": "Delete the current user account. Requires typing the account email address to confirm.",
+        "summary": "Delete account",
+        "tags": ["users"],
+        "security": [
+          {
+            "Session": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteAccountRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "400": {
+            "description": "Confirmation missing"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/v1/api-keys": {
+      "post": {
+        "description": "Create a new API key. The plaintext key is returned ONCE in this response.",
+        "summary": "Create API key",
+        "tags": ["api-keys"],
+        "security": [
+          {
+            "Session": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiKeyCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyCreateResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "402": {
+            "description": "Tier required: any paid tier (Docs/API/Pro/Ultra); body: `{ error: { code: 'tier_required' } }`"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      },
+      "get": {
+        "description": "List active API keys for the current user (revoked keys excluded).",
+        "summary": "List API keys",
+        "tags": ["api-keys"],
+        "security": [
+          {
+            "Session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "API keys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApiKeyPublic"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/v1/api-keys/{id}": {
+      "delete": {
+        "description": "Revoke an API key (soft-delete; the key is no longer accepted).",
+        "summary": "Revoke API key",
+        "tags": ["api-keys"],
+        "security": [
+          {
+            "Session": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Revoked"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
+    "/api/v1/limits": {
+      "get": {
+        "description": "Current effective rate limits (reads from env vars, so self-hosted instances return their own configured values).",
+        "summary": "Get rate limits",
+        "tags": ["system"],
+        "responses": {
+          "200": {
+            "description": "Rate limits",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LimitsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "description": "Health and version info.",
+        "summary": "Health check",
+        "tags": ["system"],
+        "responses": {
+          "200": {
+            "description": "Healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "version": {
+                      "type": "string"
+                    },
+                    "commit": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["ok", "version", "commit"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/custom-rules": {
+      "get": {
+        "description": "List custom redaction rules for the current user. Each rule defines a regex pattern that the anonymizer applies as a high-confidence span; matches override overlapping model detections. Open to all tiers including Free (a downgraded Pro user keeps their rows visible) - but rules stay DORMANT on Free: `/anonymize` skips them and re-upgrade lights them back up.",
+        "summary": "List custom rules",
+        "tags": ["custom-rules"],
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "Session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rules",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CustomRedactionRule"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          }
+        }
+      },
+      "post": {
+        "description": "Create a custom redaction rule. Pattern must be a valid regex up to 300 characters; a ReDoS guard rejects pathological patterns. Gated to paid tiers: Free/unauth callers receive 402 `tier_required`. Per-tier quota: Docs/API 20, Pro 100, Ultra unlimited. A 503 `validation_unavailable` means the pattern itself was never assessed - the save-time validation worker didn't come up in time on our side; retry after the given `Retry-After` seconds.",
+        "summary": "Create custom rule",
+        "tags": ["custom-rules"],
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "Session": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomRedactionRuleCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomRedactionRule"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "402": {
+            "description": "Tier required: any paid tier (Docs/API/Pro/Ultra); body: `{ error: { code: 'tier_required' } }`"
+          },
+          "422": {
+            "description": "Pattern rejected (invalid regex, ReDoS guard, or quota reached)"
+          },
+          "503": {
+            "description": "Validation temporarily unavailable (`validation_unavailable`) - not a pattern rejection, a liveness failure on our side. `Retry-After` header set; retry the same request."
+          }
+        }
+      }
+    },
+    "/api/v1/custom-rules/{id}": {
+      "patch": {
+        "description": "Update an existing custom redaction rule owned by the current user. Gated to paid tiers; Free/unauth returns 402. A 503 `validation_unavailable` (only when `pattern` is included) means the save-time validation worker didn't come up in time on our side, not that the pattern was rejected; retry after the given `Retry-After` seconds.",
+        "summary": "Update custom rule",
+        "tags": ["custom-rules"],
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "Session": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomRedactionRuleUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomRedactionRule"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "402": {
+            "description": "Tier required: any paid tier (Docs/API/Pro/Ultra)"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "422": {
+            "description": "Pattern rejected"
+          },
+          "503": {
+            "description": "Validation temporarily unavailable (`validation_unavailable`) - not a pattern rejection, a liveness failure on our side. `Retry-After` header set; retry the same request."
+          }
+        }
+      },
+      "delete": {
+        "description": "Delete a custom redaction rule owned by the current user. Gated to paid tiers; Free/unauth returns 402.",
+        "summary": "Delete custom rule",
+        "tags": ["custom-rules"],
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "Session": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "402": {
+            "description": "Tier required: any paid tier (Docs/API/Pro/Ultra)"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
+    "/api/v1/allowlist": {
+      "get": {
+        "description": "List allowlist entries for the current user. Entries define terms that the anonymizer must never redact (matched as word-boundary literals, case-sensitive or insensitive per entry).",
+        "summary": "List allowlist entries",
+        "tags": ["allowlist"],
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "Session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Entries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AllowlistEntry"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          }
+        }
+      },
+      "post": {
+        "description": "Create an allowlist entry. Gated to paid tiers (Docs/API/Pro/Ultra). Returns 402 with code tier_required for Free/unauth callers.",
+        "summary": "Create allowlist entry",
+        "tags": ["allowlist"],
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "Session": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AllowlistEntryCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllowlistEntry"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "402": {
+            "description": "Tier required"
+          },
+          "422": {
+            "description": "Quota reached"
+          }
+        }
+      }
+    },
+    "/api/v1/allowlist/{id}": {
+      "patch": {
+        "description": "Update an existing allowlist entry owned by the current user. Gated to paid tiers (Docs/API/Pro/Ultra).",
+        "summary": "Update allowlist entry",
+        "tags": ["allowlist"],
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "Session": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AllowlistEntryUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllowlistEntry"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "402": {
+            "description": "Tier required"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "delete": {
+        "description": "Delete an allowlist entry owned by the current user. Gated to paid tiers (Docs/API/Pro/Ultra).",
+        "summary": "Delete allowlist entry",
+        "tags": ["allowlist"],
+        "security": [
+          {
+            "ApiKey": []
+          },
+          {
+            "Session": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "402": {
+            "description": "Tier required"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
+    "/api/v1/users/me/export": {
+      "get": {
+        "description": "Download a GDPR-style export of all data associated with the current account: user profile, auth providers, API keys, custom rules (plaintext patterns), allowlist entries (plaintext values), and recent sessions.",
+        "summary": "Export account data",
+        "tags": ["users"],
+        "security": [
+          {
+            "Session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Export bundle",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "$ref": "#/components/schemas/UserPublic"
+                    },
+                    "auth_providers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "provider": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["provider", "createdAt"]
+                      }
+                    },
+                    "api_keys": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "lastUsedAt": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "revokedAt": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        },
+                        "required": ["id", "name", "createdAt", "lastUsedAt", "revokedAt"]
+                      }
+                    },
+                    "custom_redaction_rules": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "pattern": {
+                            "type": "string"
+                          },
+                          "replacementCategory": {
+                            "type": "string"
+                          },
+                          "active": {
+                            "type": "boolean"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["id", "pattern", "replacementCategory", "active", "createdAt"]
+                      }
+                    },
+                    "allowlist_entries": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AllowlistEntry"
+                      }
+                    },
+                    "sessions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "lastSeenAt": {
+                            "type": "string"
+                          },
+                          "expiresAt": {
+                            "type": "string"
+                          },
+                          "userAgent": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        },
+                        "required": ["createdAt", "lastSeenAt", "expiresAt", "userAgent"]
+                      }
+                    },
+                    "billing_subscriptions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "provider": {
+                            "type": "string"
+                          },
+                          "externalId": {
+                            "type": "string"
+                          },
+                          "externalCustomerId": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "planId": {
+                            "type": "string"
+                          },
+                          "tier": {
+                            "type": "string"
+                          },
+                          "interval": {
+                            "type": "string"
+                          },
+                          "currentPeriodEnd": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "cancelAt": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "provider",
+                          "externalId",
+                          "externalCustomerId",
+                          "status",
+                          "planId",
+                          "tier",
+                          "interval",
+                          "currentPeriodEnd",
+                          "cancelAt",
+                          "createdAt",
+                          "updatedAt"
+                        ]
+                      }
+                    },
+                    "exported_at": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "user",
+                    "auth_providers",
+                    "api_keys",
+                    "custom_redaction_rules",
+                    "allowlist_entries",
+                    "sessions",
+                    "billing_subscriptions",
+                    "exported_at"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/v1/users/me/usage": {
+      "get": {
+        "description": "Current 24-hour rolling-window usage counter for the anonymize endpoint, scoped to the signed-in user.",
+        "summary": "Get usage report",
+        "tags": ["users"],
+        "security": [
+          {
+            "Session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usage report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "endpoint": {
+                      "type": "string",
+                      "enum": ["anonymize"]
+                    },
+                    "window": {
+                      "type": "string",
+                      "enum": ["rolling_24h"]
+                    },
+                    "limit": {
+                      "type": "integer"
+                    },
+                    "used": {
+                      "type": "integer"
+                    },
+                    "remaining": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["endpoint", "window", "limit", "used", "remaining"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/v1/billing/checkout": {
+      "post": {
+        "description": "Resolve the Fungies checkout-element URL + offer id + customer data for a paid plan; the client opens the Fungies overlay checkout (@fungies/fungies-js) with the returned payload (no server-issued redirect URL). Returns `{ checkoutUrl, offerId, customerEmail, customFields: { checkout_ref } }` \u2014 `checkout_ref` is an opaque single-use nonce minted per checkout; the webhook resolves it against server-side state to link the subscription to the account. It carries no meaning on its own. Session-auth only (web flow). Rejects with 409 `already_subscribed` when the account already holds an active/trialing/past_due/scheduled_cancel subscription (the client should open the portal instead). Ships dark: returns 503 `billing_disabled` when billing is off.",
+        "summary": "Create checkout session",
+        "tags": ["billing"],
+        "security": [
+          {
+            "Session": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingCheckoutRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Fungies checkout-element URL + offer id + customer data for the client-side overlay",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingCheckoutResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid plan/interval"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "409": {
+            "description": "Already subscribed (`already_subscribed`)"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Billing disabled (`billing_disabled`) or enabled with an incomplete offer/checkout-url mapping (`billing_misconfigured`)"
+          }
+        }
+      }
+    },
+    "/api/v1/billing/portal": {
+      "post": {
+        "description": "Return the static Fungies customer-portal URL (magic-link login, env-configured) for the signed-in user to self-manage their subscription (change card, view invoices). The portal is a static, magic-link page, so this endpoint makes no provider call. Rate-limited per user (`billing_portal`, own hourly budget). 404 `no_subscription` if the account has no subscription with a stored customer id; 503 `billing_misconfigured` if billing is enabled but no portal URL is configured.",
+        "summary": "Customer portal link",
+        "tags": ["billing"],
+        "security": [
+          {
+            "Session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Portal URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingPortalResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "404": {
+            "description": "No subscription (`no_subscription`)"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Billing disabled (`billing_disabled`) or enabled with no portal URL configured (`billing_misconfigured`)"
+          }
+        }
+      }
+    },
+    "/api/v1/billing/plan/preview": {
+      "post": {
+        "description": "Preview a self-serve plan change without committing it. The payment provider exposes no proration-preview call, so it is never contacted here \u2014 `immediateCharge`/`immediateCredit`/`nextBilledAmount`/`currencyCode` are always `null`, and `nextBilledAt` is always the current subscription's period end. A 200 means the change is possible and would apply immediately; the two refusals carry their own codes (400 `downgrade_not_offered`, 400 `interval_change_not_supported`) and are checked here for the same reason they are checked on commit \u2014 so the UI never opens a confirm dialog for a change that cannot happen. Rate-limited per user (`billing_plan_preview`, own hourly budget, more generous than the mutating plan-change endpoint since this one is read-only). 404 `no_subscription` if the account has no active-ish subscription; 409 `cancel_scheduled` if the subscription already has a cancellation scheduled (measured 2026-09-02: an accepted plan change does NOT clear the cancellation on the provider's side, so the subscription would still end on its original date - plan changes are blocked outright rather than leaving a billed-but-still-cancelled account); 400 `same_plan` if the target offer equals the current one.",
+        "summary": "Preview a plan change",
+        "tags": ["billing"],
+        "security": [
+          {
+            "Session": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingPlanChangeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Preview figures (money fields always null \u2014 see description)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingPlanPreviewResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid plan/interval, or target equals current plan (`same_plan`)"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "404": {
+            "description": "No subscription (`no_subscription`)"
+          },
+          "409": {
+            "description": "A cancellation is already scheduled (`cancel_scheduled`)"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "503": {
+            "description": "Billing disabled (`billing_disabled`) or enabled with an incomplete offer mapping (`billing_misconfigured`)"
+          }
+        }
+      }
+    },
+    "/api/v1/billing/plan": {
+      "post": {
+        "description": "Change the signed-in user's plan. A change may move the tier, never the interval, and never downward. An upgrade (resolved from `tierRank`: docs=api=1, pro=2) calls Fungies' `subscriptions/{id}/update` immediately with `create_prorations`; a lateral move (docs\u2194api, same rank and price) calls `update` immediately with `none` (no charge). Both are live when the call returns, so the response carries no effective date. 400 `downgrade_not_offered` for a move to a lower tier (owner decision: downgrades are not offered; cancelling remains available). 400 `interval_change_not_supported` for any monthly\u2194annual change in either direction \u2014 a subscription's billing interval is fixed for its lifetime and the provider refuses to change it (measured 2026-08-26/27). Rate-limited per user (`billing_plan_change`, reuses the checkout endpoint's hourly limit). 404 `no_subscription` if the account has no active-ish subscription; 409 `cancel_scheduled` if the subscription already has a cancellation scheduled (measured 2026-09-02: an accepted plan change does NOT clear the cancellation on the provider's side, so the subscription would still end on its original date - plan changes are blocked outright rather than leaving a billed-but-still-cancelled account); 400 `same_plan` if the target offer equals the current one.",
+        "summary": "Change plan",
+        "tags": ["billing"],
+        "security": [
+          {
+            "Session": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingPlanChangeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Plan change applied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingPlanChangeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid plan/interval, or target equals current plan (`same_plan`)"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "404": {
+            "description": "No subscription (`no_subscription`)"
+          },
+          "409": {
+            "description": "A cancellation is already scheduled (`cancel_scheduled`)"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          },
+          "502": {
+            "description": "Billing provider error (`billing_provider_error`)"
+          },
+          "503": {
+            "description": "Billing disabled (`billing_disabled`) or enabled with an incomplete offer mapping (`billing_misconfigured`)"
+          }
+        }
+      }
+    },
+    "/api/v1/billing/webhook": {
+      "post": {
+        "description": "Fungies webhook receiver. Public, no auth \u2014 protected by HMAC-SHA256 signature verification over the raw request body (`x-fngs-signature` header, `sha256_<hex>`). Idempotent on the event id (`id`, which also carries a separate `idempotencyKey` field): duplicate deliveries return `skipped_duplicate`. A signature/parse failure and a processing failure both respond 500 so Fungies retries \u2014 they're indistinguishable from the outside, so there's no separate 4xx for a bad signature. Not called by API consumers; documented for completeness.",
+        "summary": "Fungies webhook",
+        "tags": ["billing"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Acknowledged (`processed` | `ignored` | `skipped_duplicate`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "outcome": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["outcome"]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Signature verification / payload parse failure, or a processing error \u2014 Fungies retries (`processing_error`)"
+          },
+          "503": {
+            "description": "Billing disabled (`billing_disabled`)"
+          }
+        }
+      }
+    },
+    "/api/v1/trial/start": {
+      "post": {
+        "description": "Grant the signed-in user a fourteen-day Pro trial, started by this explicit call rather than at signup. No card, no payment provider \u2014 the trial is a tier grant with its own end date in our own database (Charter \u00a76: the DB is the single source of truth for a plan either way), and `users.tier` is recomputed through the same `recomputeAndApplyTier` every billing event goes through, so a trial can never disagree with a subscription about which tier wins. A daily cron (`cron/expire-trials.ts`) re-triggers that same recompute once `endsAt` passes, for accounts that touch no other billing event in the meantime. Refused with 409 and one of four codes: `trial_already_used` (this address, in its normalised form \u2014 case, `+tag`, and Gmail dots collapsed \u2014 already had one, including under a different account sharing that form), `has_subscription` (an active-ish paying subscription needs no trial), `already_entitled` (a manually-granted `ultra` account already outranks the trial tier), `email_unverified`. Rate-limited per user (`trial_start`, own hourly budget) \u2014 the unique index on the normalised address already caps successful starts at one per address for life, so this only bounds repeated failed/probing calls.",
+        "summary": "Start the 14-day Pro trial",
+        "tags": ["trial"],
+        "security": [
+          {
+            "Session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Trial granted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tier": {
+                      "type": "string",
+                      "enum": ["pro"]
+                    },
+                    "startedAt": {
+                      "type": "string"
+                    },
+                    "endsAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["tier", "startedAt", "endsAt"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated"
+          },
+          "409": {
+            "description": "Refused (`trial_already_used` | `has_subscription` | `already_entitled` | `email_unverified`)"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/cancellation": {
+      "post": {
+        "description": "\u00a7 312k BGB cancellation-button declaration. Public, no auth, no CAPTCHA \u2014 the law requires this to be reachable without any hurdle. Always returns 200 on a structurally valid body, even when no account matches the given email: the declaration is legally received the moment it's accepted. An ordinary termination against a matched account with an active-ish, billing-enabled subscription and a requested date within the current billing period is cancelled with Fungies immediately (`autoExecuted: true`); every other case is stored for manual follow-up and the operator is notified (if `CANCELLATION_NOTIFY_EMAIL` is configured).",
+        "summary": "Submit a cancellation declaration",
+        "tags": ["cancellation"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancellationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Declaration received",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancellationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error (e.g. missing reason for an extraordinary termination)"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    }
+  }
+}

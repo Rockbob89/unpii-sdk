@@ -4,7 +4,6 @@ export { restore } from "./restore.js";
 export type {
   AnonymizeFileOptions,
   AnonymizeOptions,
-  LimitsResponse,
   RestoreOptions,
   RestoreResult,
   ScanResponse,
@@ -17,6 +16,7 @@ export type {
   AnonymizeResponse,
   AnonymizeStats,
   FileWarning,
+  LimitsResponse,
   MarkerFormat,
   Span,
 } from "./types.generated.js";
