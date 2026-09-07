@@ -1,0 +1,8 @@
+{
+  "error": {
+    "code": "tier_required",
+    "message": "markerFormat not available on your tier",
+    "markerFormat": "default",
+    "tier": "anon"
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "anonymized": "Hallo Team,\n\nxxxxxxxxxxxx hat am xxxxxxxxxx einen Termin mit HR.\nE-Mail: xxxxxxxxxxxxxxxxxxxxxxxxxxxxx, Tel xxxxxxxxxxxxxx.\nBüro: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.\nProjektseite: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nIBAN xxxxxxxxxxxxxxxxxxxxxx, Verwendungszweck xxxxxxxxxxxxxxxx.\nPortal-Token: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.\n\nPS: xxxxxxxxxxxx meldet sich morgen nochmal wegen der Zugangsdaten.",
+  "spans": [
+    {
+      "start": 13,
+      "end": 25,
+      "category": "REDACTED",
+      "id": 1,
+      "original": "Anne Schmitz",
+      "score": 0.999768927693367
+    },
+    {
+      "start": 33,
+      "end": 43,
+      "category": "REDACTED",
+      "id": 1,
+      "original": "15.03.2026",
+      "score": 1
+    },
+    {
+      "start": 73,
+      "end": 102,
+      "category": "REDACTED",
+      "id": 1,
+      "original": "anne.schmitz@beispiel-gmbh.de",
+      "score": 1
+    },
+    {
+      "start": 108,
+      "end": 122,
+      "category": "REDACTED",
+      "id": 1,
+      "original": "+49 89 9876543",
+      "score": 0.9999014139175415
+    },
+    {
+      "start": 130,
+      "end": 163,
+      "category": "REDACTED",
+      "id": 1,
+      "original": "Schellingstraße 42, 80799 München",
+      "score": 1
+    },
+    {
+      "start": 179,
+      "end": 215,
+      "category": "REDACTED",
+      "id": 1,
+      "original": "https://beispiel-gmbh.de/projekte/qr",
+      "score": 1
+    },
+    {
+      "start": 221,
+      "end": 243,
+      "category": "REDACTED",
+      "id": 1,
+      "original": "DE12500105170648489890",
+      "score": 1
+    },
+    {
+      "start": 262,
+      "end": 278,
+      "category": "REDACTED",
+      "id": 2,
+      "original": "RECH-2026-003291",
+      "score": 1
+    },
+    {
+      "start": 294,
+      "end": 330,
+      "category": "REDACTED",
+      "id": 1,
+      "original": "sk_test_aBcDeFgHiJkLmNoPqRsTuVwXyZ12",
+      "score": 1
+    },
+    {
+      "start": 337,
+      "end": 349,
+      "category": "REDACTED",
+      "id": 2,
+      "original": "hans schmidt",
+      "score": 0.9832428991794586
+    }
+  ],
+  "uncertainSpans": [],
+  "stats": { "request_id": "req-9", "processed_chars": 400, "servedBy": "slow" }
+}

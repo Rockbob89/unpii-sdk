@@ -1,0 +1,9 @@
+# Not just `.venv/`: checking the declared 3.11 floor while a 3.12 venv is in
+# use means a second one sitting right here (`.venv311`).
+.venv*/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+dist/
+build/

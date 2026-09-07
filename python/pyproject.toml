@@ -1,0 +1,44 @@
+[project]
+name = "unpii-sdk"
+version = "0.1.0"
+description = "Python client for the unpii.me PII redaction API"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+# Zero runtime dependencies on purpose: the client is stdlib-only
+# (urllib.request, json, os, re, dataclasses, uuid, mimetypes). A test in
+# tests/test_client.py parses this table with tomllib and asserts it stays
+# empty — a dependency here is a decision, never a drive-by addition.
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3",
+  # Exact pin so lint results don't drift with new releases — same reasoning
+  # as apps/inference/pyproject.toml's [tool.ruff.lint] select note below.
+  "ruff==0.16.4",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/unpii"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+# ruff 0.16.0 (2026-07-23) changed its DEFAULT rule set from 59 rules
+# (E4/E7/E9/F) to 413 rules across many more plugins - a behavior change in
+# ruff itself, not a config change here. Leaving `select` unset under an
+# exact-pinned 0.16.4 would silently adopt the new default. Pinning `select`
+# explicitly keeps the effective ruleset exactly this list regardless of what
+# ruff's own default does on future bumps. Same list and same reasoning as
+# apps/inference/pyproject.toml.
+select = ["E4", "E7", "E9", "F", "B", "BLE", "I", "RUF", "SIM", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
