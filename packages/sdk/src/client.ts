@@ -3,11 +3,11 @@ import type {
   AnonymizeFileResponse,
   AnonymizeFileTextResponse,
   AnonymizeResponse,
+  LimitsResponse,
 } from "./types.generated.js";
 import type {
   AnonymizeFileOptions,
   AnonymizeOptions,
-  LimitsResponse,
   ScanResponse,
   UnpiiOptions,
 } from "./types.js";
