@@ -22,6 +22,7 @@ import {
   restoreSummary,
   scanNotAvailableMessage,
   scanStatusLabel,
+  scanTableHeaders,
   tooManyPathsMessage,
   unexpectedErrorMessage,
 } from "../src/messages.js";
@@ -253,6 +254,26 @@ describe("scanStatusLabel()", () => {
 
   it("the two English labels are distinct from each other", () => {
     expect(scanStatusLabel(true, "en")).not.toBe(scanStatusLabel(false, "en"));
+  });
+});
+
+describe("scanTableHeaders()", () => {
+  it("both languages have six non-empty cells", () => {
+    for (const lang of ["de", "en"] as const) {
+      const headers = scanTableHeaders(lang);
+      expect(headers).toHaveLength(6);
+      for (const cell of headers) {
+        expect(cell.trim().length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("the composed header rows differ between languages", () => {
+    // Four of the six cells (ID, START, SCORE, STATUS) are correctly identical in both
+    // languages — a cell-for-cell inequality check would be wrong (see the doc comment on
+    // scanTableHeaders). Comparing the composed row is the right invariant: it catches a header
+    // that silently reverted to one fixed language without demanding every cell differ.
+    expect(scanTableHeaders("de").join(" ")).not.toBe(scanTableHeaders("en").join(" "));
   });
 });
 
