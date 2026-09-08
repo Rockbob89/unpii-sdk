@@ -2,23 +2,23 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import type { OpenAPI3 } from "openapi-typescript";
 import { describe, it } from "vitest";
+import { REQUIRED_SCHEMA_NAMES, reduceContractSnapshot } from "../scripts/gen-types.js";
 
 /**
  * Compares the checked-in `contract/openapi.json` against the LIVE production document. Skipped
  * by default — this hits the real network and the real server — and runs only when
  * `UNPII_CONTRACT_LIVE=1` is set, per `contract/README.md`'s "renewing the snapshot" recipe.
+ *
+ * `contract/openapi.json` itself is a REDUCED snapshot (five schemas, three paths — see
+ * gen-types.ts and contract/README.md), while the live document is still the full private
+ * contract. Every comparison below therefore reduces the live document the SAME way
+ * (`reduceContractSnapshot`, the one shared rule) before comparing — a raw whole-document diff
+ * against a reduced snapshot would report "drift" on every run purely from the 21 schemas and 18
+ * paths this repo no longer carries, which is not what changed.
  */
 const LIVE_URL = "https://unpii.me/api/v1/openapi.json";
 const CONTRACT_PATH = fileURLToPath(new URL("../../../contract/openapi.json", import.meta.url));
 const RUN_LIVE = process.env.UNPII_CONTRACT_LIVE === "1";
-
-const DERIVED_SCHEMA_NAMES = [
-  "AnonymizeRequest",
-  "AnonymizeResponse",
-  "AnonymizeFileResponse",
-  "AnonymizeFileTextResponse",
-  "LimitsResponse",
-] as const;
 
 function readSnapshot(): OpenAPI3 {
   return JSON.parse(readFileSync(CONTRACT_PATH, "utf8")) as OpenAPI3;
@@ -100,7 +100,7 @@ describe.skipIf(!RUN_LIVE)("live contract (UNPII_CONTRACT_LIVE=1)", () => {
     // no longer describe what the server actually sends or accepts.
     const snapshot = readSnapshot();
     const live = await fetchLive();
-    for (const name of DERIVED_SCHEMA_NAMES) {
+    for (const name of REQUIRED_SCHEMA_NAMES) {
       const diff = firstDifference(
         snapshot.components?.schemas?.[name],
         live.components?.schemas?.[name],
@@ -114,21 +114,23 @@ describe.skipIf(!RUN_LIVE)("live contract (UNPII_CONTRACT_LIVE=1)", () => {
     }
   });
 
-  it("the rest of the document (excluding info.version and servers) is unchanged in production", async () => {
-    // This is the check that reports staleness: it catches everything the previous test does
-    // not — an added route, a changed schema outside the SDK's five — so it is expected to go
-    // red long before the SDK's own types are actually wrong. A red result here means "refresh
-    // the snapshot" (contract/README.md), not necessarily "the SDK is broken".
+  it("the reduced document (excluding info.version and servers) is unchanged in production", async () => {
+    // This is the check that reports staleness within what the snapshot actually keeps: the
+    // three paths and their operation shapes, not just the five schemas the previous test checks
+    // directly. It cannot catch drift OUTSIDE the reduced surface (a changed billing schema, a
+    // new admin route) — the snapshot deliberately no longer carries that surface at all, per
+    // contract/README.md — so a red result here means "refresh the snapshot" for the
+    // anonymize/anonymize-file/limits surface specifically, not "the private API changed".
     const snapshot = readSnapshot();
     const live = await fetchLive();
     const diff = firstDifference(
       normalizeForWholeDocumentComparison(snapshot),
-      normalizeForWholeDocumentComparison(live),
+      normalizeForWholeDocumentComparison(reduceContractSnapshot(live)),
       "",
     );
     if (diff !== undefined) {
       throw new Error(
-        `contract/openapi.json is stale — live document deviates (excluding info.version and servers): ${diff}`,
+        `contract/openapi.json is stale — live document deviates within the reduced surface (excluding info.version and servers): ${diff}`,
       );
     }
   });

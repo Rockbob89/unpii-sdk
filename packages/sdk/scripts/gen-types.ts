@@ -29,11 +29,22 @@ const SOURCE_FILE = "contract/openapi.json";
 const REGEN_COMMAND = "pnpm --filter @unpii/sdk gen:types";
 
 /**
- * The five schemas this SDK derives its public types from. The contract carries 21 more
- * (billing, allowlist, api-keys, admin, auth, ...) — everything else is deliberately excluded so
- * the published `.d.ts` exposes only the anonymize/file/limits surface, not the whole private API.
+ * The five schemas this SDK derives its public types from, and the three operations it actually
+ * calls. This is the SINGLE list — both `contract/openapi.json` itself (via
+ * `reduceContractSnapshot`, run when the snapshot is refreshed, see contract/README.md) and the
+ * type generator below (`reduceDocument`) filter through these same two constants. A second,
+ * separately-maintained list here would drift from the checked-in file the way it already has
+ * elsewhere in the monorepo this SDK was transplanted from (AGENTS.md §8) — one list, two
+ * consumers, is the guard against that.
+ *
+ * The private surface (billing, allowlist, api-keys, admin, auth, ...) is excluded from BOTH the
+ * checked-in snapshot and the generated `.d.ts` — not just filtered out of the types while sitting
+ * in the tree in full. `https://unpii.me/api/v1/openapi.json` still answers unauthenticated with
+ * the complete document; nothing here withholds it from that endpoint. What this avoids is a
+ * second, permanent, searchable copy of the private surface in a public repo's git history for no
+ * functional reason — see contract/README.md.
  */
-const REQUIRED_SCHEMA_NAMES = [
+export const REQUIRED_SCHEMA_NAMES = [
   "AnonymizeRequest",
   "AnonymizeResponse",
   "AnonymizeFileResponse",
@@ -41,13 +52,20 @@ const REQUIRED_SCHEMA_NAMES = [
   "LimitsResponse",
 ] as const;
 
-/**
- * Builds an in-memory OpenAPI document carrying only the schemas above, with `paths` emptied
- * out. Throws — naming the missing schema — rather than silently generating fewer than five: a
- * contract change that renames or drops one of these must fail loudly here, not quietly ship a
- * smaller SDK.
- */
-function reduceDocument(doc: OpenAPI3): OpenAPI3 {
+export const REQUIRED_PATHS = [
+  "/api/v1/anonymize",
+  "/api/v1/anonymize-file",
+  "/api/v1/limits",
+] as const;
+
+/** Throws — naming the missing schema — rather than silently returning fewer than required: a
+ * contract change that renames or drops one of these must fail loudly, not quietly ship a smaller
+ * SDK or a snapshot that no longer matches what gen-types.ts assumes. Shared by both
+ * `reduceDocument` (type generation) and `reduceContractSnapshot` (the checked-in file) so the
+ * "missing schema" case is caught the same way in both places. */
+function collectRequiredSchemas(
+  doc: OpenAPI3,
+): NonNullable<NonNullable<OpenAPI3["components"]>["schemas"]> {
   const sourceSchemas = doc.components?.schemas ?? {};
   const schemas: Record<string, (typeof sourceSchemas)[string]> = {};
   for (const name of REQUIRED_SCHEMA_NAMES) {
@@ -59,11 +77,56 @@ function reduceDocument(doc: OpenAPI3): OpenAPI3 {
     }
     schemas[name] = schema;
   }
+  return schemas;
+}
+
+/** Same throw-don't-drop discipline as `collectRequiredSchemas`, for the three paths this SDK
+ * actually calls. */
+function collectRequiredPaths(doc: OpenAPI3): NonNullable<OpenAPI3["paths"]> {
+  const sourcePaths = doc.paths ?? {};
+  const paths: Record<string, (typeof sourcePaths)[string]> = {};
+  for (const path of REQUIRED_PATHS) {
+    const item = sourcePaths[path];
+    if (item === undefined) {
+      throw new Error(
+        `gen-types: path "${path}" is missing from ${SOURCE_FILE} — the contract changed shape. Update REQUIRED_PATHS in gen-types.ts deliberately instead of generating a snapshot without it.`,
+      );
+    }
+    paths[path] = item;
+  }
+  return paths;
+}
+
+/**
+ * Builds an in-memory OpenAPI document carrying only the required schemas, with `paths` emptied
+ * out — used for TYPE GENERATION only, never for the checked-in snapshot. Operation types are not
+ * something this SDK's generated `.d.ts` needs, only the request/response shapes under
+ * `components.schemas`, so `openapiTS()` is never even given the three paths `REQUIRED_PATHS`
+ * names — see `reduceContractSnapshot` below for where those go instead.
+ */
+function reduceDocument(doc: OpenAPI3): OpenAPI3 {
   return {
     openapi: doc.openapi,
     info: doc.info,
     paths: {},
-    components: { schemas },
+    components: { schemas: collectRequiredSchemas(doc) },
+  };
+}
+
+/**
+ * Builds the document that gets WRITTEN to `contract/openapi.json` — the checked-in snapshot —
+ * from a freshly fetched full document. Unlike `reduceDocument` above, this keeps the three paths
+ * this SDK actually calls (`REQUIRED_PATHS`), so the checked-in file reads as a coherent, honest
+ * partial contract (which operations exist, not just orphan schemas) rather than a bag of shapes
+ * with no paths. Run via `pnpm --filter @unpii/sdk reduce:contract`, see contract/README.md.
+ */
+export function reduceContractSnapshot(doc: OpenAPI3): OpenAPI3 {
+  return {
+    openapi: doc.openapi,
+    info: doc.info,
+    servers: doc.servers,
+    paths: collectRequiredPaths(doc),
+    components: { schemas: collectRequiredSchemas(doc) },
   };
 }
 

@@ -1,12 +1,16 @@
 # Contract
 
-`openapi.json` in this directory is a snapshot of the production API's own OpenAPI document —
-not a spec anyone wrote by hand. It is the source `packages/sdk/scripts/gen-types.ts` reads to
-produce `packages/sdk/src/types.generated.ts`.
+`openapi.json` in this directory is a **reduced extract** of the production API's own OpenAPI
+document — not a spec anyone wrote by hand, and, since 2026-09-08, not the full document either.
+It carries only the five schemas and three paths this SDK actually calls; see "Why this file is
+reduced" below for the rule and the reason. It is the source
+`packages/sdk/scripts/gen-types.ts` reads to produce `packages/sdk/src/types.generated.ts`.
 
 ## Provenance
 
-Fetched 2026-09-07 with:
+Originally fetched 2026-09-07 with the command below — **historical**, shown for the record of
+where the underlying capture came from; it produces the FULL private contract and is missing the
+reduce step, so do not run it as-is. "Renewing the snapshot" below has the current recipe.
 
 ```sh
 curl -sS -o /tmp/openapi-raw.json "https://unpii.me/api/v1/openapi.json"
@@ -15,7 +19,10 @@ pnpm format   # biome reformats it; biome's formatting is canonical, not json.to
 ```
 
 The server's own response headers on that date: `last-modified: Mon, 07 Sep 2026 08:40:24 GMT`,
-served by Caddy over HTTP/2, `content-type: application/json; charset=utf-8`.
+served by Caddy over HTTP/2, `content-type: application/json; charset=utf-8`. That fetch produced
+the full private contract (26 schemas, 21 paths); reduced to the five schemas and three paths
+below on 2026-09-08, after the same underlying capture — this repo has never checked in the full
+document from a fetch newer than 2026-09-07.
 
 **`https://unpii.me/openapi.json` (no `/api/v1/` prefix) is a trap, not a shortcut.** It answers
 `200 text/html` with the web app's SPA shell — measured the same day, same `curl`, headers
@@ -40,12 +47,30 @@ value from the donor repo this SDK was transplanted from. If you find it, that i
 whole tree (`grep -rn "api\.unpii\.me"`, excluding `node_modules`, `dist`, `.venv`,
 `pnpm-lock.yaml`) and fix every hit.
 
-## What's in here, and what isn't
+## Why this file is reduced
 
-The document carries 26 schemas: five the SDK's public surface is built from, and 21 more —
-billing, allowlist, api-keys, admin, auth, cancellation — that belong to the private web/API
-surface and have nothing to do with a published client SDK. `gen-types.ts` reduces the document
-to exactly these five before handing it to `openapiTS()`:
+The production document carries 26 schemas and 21 paths: five schemas and three paths (`POST
+/api/v1/anonymize`, `POST /api/v1/anonymize-file`, `GET /api/v1/limits`) this SDK's public
+surface is built from, and everything else — billing, allowlist, api-keys, admin, auth,
+cancellation, the GDPR export at `/users/me/export`, an `isAdmin` flag on `UserPublic` — belongs
+to the private web/API surface and has nothing to do with a published client SDK.
+
+**This is not a secrecy measure — `https://unpii.me/api/v1/openapi.json` answers the full
+document unauthenticated, and still does.** Nothing about this reduction withholds information
+from that endpoint or from anyone who queries it directly. What it avoids is different: a public
+repo's git history is effectively permanent the moment anyone forks or clones it, and a
+searchable, versioned copy of the private surface sitting in that history is a different kind of
+exposure than a JSON response nobody has a reason to specifically query — found and fixed in
+review, 2026-09-08, before this repo had ever been published. So `contract/openapi.json` itself
+carries only the five schemas and three paths below — not the full document with the rest merely
+filtered out downstream.
+
+`REQUIRED_SCHEMA_NAMES` and `REQUIRED_PATHS` in `packages/sdk/scripts/gen-types.ts` are the
+single, exported list this rule lives as — both the script that produces this file
+(`reduce-contract-snapshot.ts`, run via `pnpm --filter @unpii/sdk reduce:contract`) and the type
+generator (`gen-types.ts`'s own `reduceDocument`) read the same two constants, rather than each
+carrying its own copy that could drift from the other. `packages/sdk/test/contract-live.test.ts`
+imports `REQUIRED_SCHEMA_NAMES` for the same reason, instead of maintaining a third copy:
 
 - `AnonymizeRequest`
 - `AnonymizeResponse`
@@ -53,10 +78,12 @@ to exactly these five before handing it to `openapiTS()`:
 - `AnonymizeFileTextResponse`
 - `LimitsResponse`
 
-Running `openapiTS()` over the *full* document instead emits roughly 2000 lines and would leak
-the entire private API shape (billing requests, admin fields, ...) into the published `.d.ts`.
-The reduction is enforced, not just a convention: `gen-types.ts` throws by name if any of the
-five is missing from the source document, rather than silently generating fewer.
+Running `openapiTS()` over the *full* document instead of this already-reduced file would still
+emit roughly 2000 lines and leak the entire private API shape (billing requests, admin fields,
+...) into the published `.d.ts` — `gen-types.ts`'s own `reduceDocument` step still exists and
+still throws by name if any of the five is missing, as a second, independent guard, not because
+it is still doing the primary reduction. That work now happens once, when the snapshot is
+refreshed, not on every `gen:types` run.
 
 `Span`, `AnonymizeStats` and `FileWarning` are **not** top-level schemas in this contract — the
 server inlines their shape directly into `AnonymizeResponse.spans`, `.stats`,
@@ -100,11 +127,19 @@ syntax, which is why this reasoning lives here instead of next to that line.
 
 ```sh
 curl -sS -o /tmp/openapi-raw.json "https://unpii.me/api/v1/openapi.json"
-python3 -m json.tool --indent 2 /tmp/openapi-raw.json contract/openapi.json
+pnpm --filter @unpii/sdk reduce:contract /tmp/openapi-raw.json
 pnpm format
 pnpm --filter @unpii/sdk gen:types
 pnpm verify
 ```
+
+**The reduce step is not optional, and its position matters: before `pnpm format`, before
+anything else touches `contract/openapi.json`.** The raw fetch is the full private contract; the
+one place it may legitimately exist is `/tmp`, never a path `git add` can reach. `reduce:contract`
+(`packages/sdk/scripts/reduce-contract-snapshot.ts`) reads the fetched file, keeps exactly
+`REQUIRED_SCHEMA_NAMES`/`REQUIRED_PATHS` from `gen-types.ts`, and writes the result straight to
+`contract/openapi.json` — there is no intermediate state where the full document sits at that
+path waiting for a later step to shrink it.
 
 `test/gen-types.test.ts` fails if the checked-in `types.generated.ts` no longer matches what the
 generator produces from the (possibly updated) snapshot — that failure is the reminder to run
@@ -112,3 +147,7 @@ generator produces from the (possibly updated) snapshot — that failure is the 
 (`packages/sdk/test/contract-live.test.ts`, skipped unless `UNPII_CONTRACT_LIVE=1` is set) and
 tells you when the checked-in snapshot itself has drifted from production, which `gen-types.test.ts`
 alone cannot: that test only ever compares the generator against whatever snapshot is on disk.
+Both of that live test's checks reduce the live-fetched document with the same
+`reduceContractSnapshot` before comparing — a raw whole-document diff against a reduced snapshot
+would report drift on every single run, from the surface this repo no longer carries at all, not
+from anything that actually changed.
