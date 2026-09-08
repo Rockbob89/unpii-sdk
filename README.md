@@ -26,8 +26,8 @@ console.log(res.anonymized); // Hallo [PERSON_1], Termin am [DATE_1]
 CLI:
 
 ```bash
-cat prod.log | npx unpii > prod.anon.log
-npx unpii vertrag.docx --out vertrag.anon.docx
+cat prod.log | npx @unpii/cli > prod.anon.log
+npx @unpii/cli vertrag.docx --out vertrag.anon.docx
 ```
 
 Python:

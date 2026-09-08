@@ -1,6 +1,6 @@
 [project]
 name = "unpii-sdk"
-version = "0.1.0"
+version = "0.1.1"
 description = "Python client for the unpii.me PII redaction API"
 readme = "README.md"
 requires-python = ">=3.11"

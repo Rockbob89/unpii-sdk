@@ -1,19 +1,27 @@
-# unpii
+# @unpii/cli
 
 Command-line client for [unpii](https://unpii.me) - send text, Markdown, or a `.docx`/`.pdf`, get
 it back with the personal data replaced by category-specific markers.
 
 ```bash
-npx unpii --help
+npx @unpii/cli --help
 ```
 
-No install needed - `npx unpii` fetches and runs it for one call.
+No install needed - `npx @unpii/cli` fetches and runs it for one call.
+
+**The package is `@unpii/cli`, the command is `unpii`.** Installed globally, you type the short
+one:
+
+```bash
+npm i -g @unpii/cli
+unpii --help
+```
 
 Three lines to your first redaction:
 
 ```bash
-cat prod.log | npx unpii > prod.anon.log
-npx unpii vertrag.docx --out vertrag.anon.docx
+cat prod.log | npx @unpii/cli > prod.anon.log
+npx @unpii/cli vertrag.docx --out vertrag.anon.docx
 ```
 
 ## Where the key comes from
@@ -58,7 +66,7 @@ Environment variables:
 Without a path, input is read from stdin. The file type is detected from both the extension and
 the first bytes; when they disagree, the bytes win.
 
-Run `npx unpii --help` for the same text your installed version actually ships, including the
+Run `npx @unpii/cli --help` for the same text your installed version actually ships, including the
 examples.
 
 ## Exit codes
@@ -76,9 +84,9 @@ that still contains the markers. It makes **no network call and needs no API key
 local re-substitution over a response you already have on disk:
 
 ```bash
-npx unpii --json vertrag.txt > result.json
+npx @unpii/cli --json vertrag.txt > result.json
 # ... send result's anonymized text to your LLM, get an answer back ...
-npx unpii restore --from result.json answer.md > answer.klartext.md
+npx @unpii/cli restore --from result.json answer.md > answer.klartext.md
 ```
 
 ## What this tool writes

@@ -1,6 +1,6 @@
 {
-  "name": "unpii",
-  "version": "0.1.0",
+  "name": "@unpii/cli",
+  "version": "0.1.1",
   "type": "module",
   "description": "Command-line client for the unpii.me API: anonymize text and files from a shell, restore markers back to their originals.",
   "license": "Apache-2.0",
