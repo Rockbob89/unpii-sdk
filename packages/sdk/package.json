@@ -23,7 +23,8 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "gen:types": "tsx scripts/gen-types.ts"
+    "gen:types": "tsx scripts/gen-types.ts",
+    "reduce:contract": "tsx scripts/reduce-contract-snapshot.ts"
   },
   "devDependencies": {
     "openapi-typescript": "^7",
