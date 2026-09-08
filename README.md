@@ -34,9 +34,9 @@ Python:
 
 ```python
 import os
-from unpii import Client
+from unpii import Unpii
 
-res = Client(api_key=os.environ["UNPII_API_KEY"]).anonymize("Hallo Anne Schmitz, Termin am 15.03.2026")
+res = Unpii(api_key=os.environ["UNPII_API_KEY"]).anonymize("Hallo Anne Schmitz, Termin am 15.03.2026")
 
 print(res.anonymized)  # Hallo [PERSON_1], Termin am [DATE_1]
 ```
