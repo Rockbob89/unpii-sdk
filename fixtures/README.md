@@ -1,55 +1,55 @@
-# SDK-Fixtures - Herkunft
+# SDK fixtures - provenance
 
-Jede `.json` in diesem Verzeichnis ist eine **unveraenderte Antwort des echten Servers**,
-aufgenommen am **2026-09-07** gegen eine Entwicklungsinstanz der API. Nichts hier ist
-handgeschrieben. Die einzige nachtraegliche Aenderung ist Biomes JSON-Formatierung
-(Einrueckung, Zeilenumbrueche), damit `pnpm lint` ohne Ausnahmeregel gruen bleibt -
-Schluesselreihenfolge, Werte und Gleitkomma-Genauigkeit sind die des Servers.
+Every `.json` in this directory is an **unedited response from the real server**, captured on
+**2026-09-07** against a development instance of the API. Nothing here is hand-written. The only
+change made afterward is Biome's JSON formatting (indentation, line breaks) so that `pnpm lint`
+stays green without an exception rule - key order, values and floating-point precision are the
+server's own.
 
-Welche Modellversion die Spans erzeugt hat, steht in den Aufzeichnungen des Hauptrepos, das die
-API baut, und nicht hier: welches Modell hinter der API laeuft, ist keine Zusage an den Aufrufer
-und aendert sich, ohne dass der Vertrag sich aendert.
+Which model version produced the spans is recorded in the private repo that builds the API, not
+here: which model runs behind the API is not a promise to the caller and can change without the
+contract changing.
 
-Der Grund fuer diese Strenge ist teuer bezahlt: ein handgeschriebener Stub hat schon einmal
-einen Integrationsfehler bis in die Produktion gruen durchgewinkt. Ein Fixture ist ein Beleg oder es
-ist nichts. Wer eine Datei ersetzt, nimmt sie neu auf - er editiert sie nicht.
+The reason for this strictness was expensive to learn: a hand-written stub once waved an
+integration bug all the way through to production, green the whole time. A fixture is either
+evidence or it is nothing. Replacing a file means re-capturing it, not hand-editing the JSON.
 
-Eingabetext aller Text-Aufnahmen ist der Sample-Text der Weboberflaeche (der i18n-String
-`redact.input.sample`). Die Datei-Aufnahme benutzt eine formatierte .docx-Testdatei aus dem
-Hauptrepo, das die API baut - dort Teil von dessen eigenen Test-Fixtures.
+The input text of every text capture is the web app's sample text (the i18n string
+`redact.input.sample`). The file capture uses a formatted `.docx` test fixture from the private
+repo that builds the API, where it is part of that repo's own test fixtures.
 
-| Datei | Aufruf | Aufrufer | Status |
+| File | Call | Caller | Status |
 |---|---|---|---|
-| `anonymize.docs.json` | `POST /api/v1/anonymize`, `{text, markerFormat:"default", ambiguous:"redact"}` | API-Key, Tier `docs` | 200 |
-| `anonymize.anon.json` | `POST /api/v1/anonymize`, `{text}` | ohne Auth (anonym) | 200 |
-| `anonymize-file.docx.json` | `POST /api/v1/anonymize-file`, Multipart `markerFormat` + `file` | API-Key, Tier `docs` | 200 |
-| `error.tier-required.json` | `POST /api/v1/anonymize`, `markerFormat:"default"` | ohne Auth (anonym) | 402 `tier_required` |
-| `error.account-tier-required.json` | `POST /api/v1/anonymize` | API-Key, Tier `free` | 402 `account_tier_required` |
-| `error.route-not-found.json` | `POST /api/v1/scan` | API-Key, Tier `docs` | 404 (Route gibt es heute nicht) |
+| `anonymize.docs.json` | `POST /api/v1/anonymize`, `{text, markerFormat:"default", ambiguous:"redact"}` | API key, tier `docs` | 200 |
+| `anonymize.anon.json` | `POST /api/v1/anonymize`, `{text}` | no auth (anonymous) | 200 |
+| `anonymize-file.docx.json` | `POST /api/v1/anonymize-file`, multipart `markerFormat` + `file` | API key, tier `docs` | 200 |
+| `error.tier-required.json` | `POST /api/v1/anonymize`, `markerFormat:"default"` | no auth (anonymous) | 402 `tier_required` |
+| `error.account-tier-required.json` | `POST /api/v1/anonymize` | API key, tier `free` | 402 `account_tier_required` |
+| `error.route-not-found.json` | `POST /api/v1/scan` | API key, tier `docs` | 404 (route does not exist yet) |
 
-Die 404-Aufnahme ist die wichtigste der drei Fehleraufnahmen, weil sie eine ANDERE Huelle hat:
-Fastifys Standardfehler ist `{message, error, statusCode}` - `error` ist dort ein **String**,
-waehrend unsere eigenen Fehler `{error: {code, message, ...}}` liefern. Ein Fehlerparser, der
-`body.error.code` blind liest, stirbt an dieser Antwort. Deshalb liegt sie hier.
+The 404 capture is the most important of the three error captures, because it has a DIFFERENT
+envelope: Fastify's default error is `{message, error, statusCode}` - `error` is a **string**
+there, while our own errors return `{error: {code, message, ...}}`. An error parser that blindly
+reads `body.error.code` dies on this response. That is why it is here.
 
-Was die zwei Erfolgsaufnahmen unterscheiden, ist nicht nur der Tier: anonym liefert der Server
-maskierte Marker (`xxxxx`) und die Kategorie `REDACTED` statt der echten Kategorie. Die SDK muss
-beide Formen unfallfrei durchreichen, deshalb liegen beide hier.
+What distinguishes the two success captures is not just the tier: the anonymous response masks
+the markers (`xxxxx`) and uses the category `REDACTED` instead of the real category. The SDK has
+to pass both forms through without incident, which is why both are here.
 
-## Was hier NICHT liegt
+## What is NOT here
 
-Fuer `POST /api/v1/scan` gibt es keine Aufnahme, weil es die Route auf dem Server, gegen den
-aufgenommen wurde, noch nicht gibt. `Unpii.scan()` ist gegen den in diesem Repo hand-typisierten
-Vertrag gebaut (`packages/sdk/src/types.ts`s `ScanResponse`, siehe dessen Kommentar) und wird im
-Test gegen einen Stub gefahren, der aus `anonymize.docs.json` abgeleitet ist. Sobald `/scan` auf
-dem Server steht, gehoert hier eine echte Aufnahme her - und der abgeleitete Stub verschwindet.
+There is no capture for `POST /api/v1/scan`, because the route does not exist yet on the server
+this was captured against. `Unpii.scan()` is built against the contract hand-typed in this repo
+(`packages/sdk/src/types.ts`'s `ScanResponse`, see its comment) and is tested against a stub
+derived from `anonymize.docs.json`. Once `/scan` ships on the server, a real capture belongs here
+and the derived stub goes away.
 
-## Neu aufnehmen
+## Re-capturing
 
-Im Hauptrepo, das die API baut, lokal starten, einen API-Key auf dem gewuenschten Tarif erzeugen
-(an der Weboberflaeche unter `/de/account/api-keys`) und exakt den in der Tabelle oben genannten
-Aufruf gegen die laufende Dev-API fahren - Ergebnis roh in die passende Datei hier schreiben.
-Danach `pnpm format`: Biome reformatiert (Einrueckung, Zeilenumbrueche), damit `pnpm lint` hier
-gruen bleibt, ohne Schluesselreihenfolge oder Werte anzufassen.
+Start the private repo that builds the API locally, mint an API key on the desired tier (via the
+web app under `/de/account/api-keys`), and run exactly the call named in the table above against
+the running dev API - write the raw result into the matching file here. Then run `pnpm format`:
+Biome reformats it (indentation, line breaks) so `pnpm lint` stays green here, without touching
+key order or values.
 
-Der Key gehoert nicht in diese Datei, nicht in einen Commit und nicht in eine Fehlermeldung.
+The key belongs in none of: this file, a commit, or an error message.
