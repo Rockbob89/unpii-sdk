@@ -1,4 +1,4 @@
-"""Unit tests for unpii.restore.restore(). Fixture-derived where the answer
+"""Unit tests for unpii_sdk.restore.restore(). Fixture-derived where the answer
 text and span data matter (fixtures/anonymize.docs.json, the same real
 server capture the TypeScript SDK's tests use), matching the three
 acceptance criteria captured when this restore-back feature shipped
@@ -10,8 +10,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from unpii.client import Span
-from unpii.restore import restore
+from unpii_sdk.client import Span
+from unpii_sdk.restore import restore
 
 FIXTURES_DIR = Path(__file__).resolve().parent.parent.parent / "fixtures"
 

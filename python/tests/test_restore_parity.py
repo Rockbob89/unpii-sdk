@@ -1,4 +1,4 @@
-"""Cross-language parity: `unpii.restore.restore()` (this package) and the
+"""Cross-language parity: `unpii_sdk.restore.restore()` (this package) and the
 TypeScript SDK's `restore()` must agree, exactly, on every case in
 tests/restore-cases.json. That file's own `_note` field says it plainly:
 changing an `expect` value there changes the specified behaviour of BOTH
@@ -27,8 +27,8 @@ from typing import Any
 
 import pytest
 
-from unpii.client import Span
-from unpii.restore import restore
+from unpii_sdk.client import Span
+from unpii_sdk.restore import restore
 
 CASES_PATH = Path(__file__).resolve().parent.parent.parent / "test-cases" / "restore-cases.json"
 

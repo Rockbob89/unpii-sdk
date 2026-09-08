@@ -13,7 +13,7 @@ Three lines to your first redaction:
 
 ```python
 import os
-from unpii import Unpii
+from unpii_sdk import Unpii
 
 res = Unpii(api_key=os.environ["UNPII_API_KEY"]).anonymize("Hallo Anne Schmitz, Termin am 15.03.2026")
 
@@ -41,7 +41,7 @@ from an LLM is a pure function over data you already hold. No second request, no
 your process:
 
 ```python
-from unpii import Unpii, restore
+from unpii_sdk import Unpii, restore
 
 res = Unpii(api_key=os.environ["UNPII_API_KEY"]).anonymize(email)
 answer = your_llm(res.anonymized)
