@@ -1,4 +1,4 @@
-"""Tests for unpii.client.Client against a real local HTTP server (stdlib
+"""Tests for unpii.client.Unpii against a real local HTTP server (stdlib
 http.server), using response fixtures captured from the real unpii.me API —
 see fixtures/README.md for exact provenance. Never hand-written stubs for
 the error shapes: a hand-written stub is what let a real integration bug
@@ -22,7 +22,7 @@ from typing import Any
 
 import pytest
 
-from unpii.client import Client
+from unpii.client import Unpii
 from unpii.errors import UnpiiError
 
 FIXTURES_DIR = Path(__file__).resolve().parent.parent.parent / "fixtures"
@@ -123,7 +123,7 @@ def test_anonymize_sends_bearer_auth_and_omits_none_fields(server: _StubServer) 
         "/api/v1/anonymize",
         _Stub(200, load_fixture("anonymize.docs.json")),
     )
-    client = Client(api_key=API_KEY, base_url=server.base_url)
+    client = Unpii(api_key=API_KEY, base_url=server.base_url)
 
     result = client.anonymize("Hallo Anne Schmitz", marker_format="default")
 
@@ -150,7 +150,7 @@ def test_anonymize_anon_response_shape(server: _StubServer) -> None:
     """The anonymous (unauthenticated) fixture uses masked markers and the
     REDACTED category — same parser must handle both without special-casing."""
     server.queue("POST", "/api/v1/anonymize", _Stub(200, load_fixture("anonymize.anon.json")))
-    client = Client(api_key=API_KEY, base_url=server.base_url)
+    client = Unpii(api_key=API_KEY, base_url=server.base_url)
 
     result = client.anonymize("Hallo Anne Schmitz")
 
@@ -162,7 +162,7 @@ def test_anonymize_anon_response_shape(server: _StubServer) -> None:
 
 def test_anonymize_all_optional_fields_sent(server: _StubServer) -> None:
     server.queue("POST", "/api/v1/anonymize", _Stub(200, load_fixture("anonymize.docs.json")))
-    client = Client(api_key=API_KEY, base_url=server.base_url)
+    client = Unpii(api_key=API_KEY, base_url=server.base_url)
 
     client.anonymize(
         "text", marker_format="custom", ambiguous="mark", keep=["DATE", "URL"], structure=True
@@ -185,7 +185,7 @@ def test_scan_against_todays_server_raises_404_with_no_code(server: _StubServer)
     """The /scan route does not exist on today's server; Fastify's default
     404 handler returns {"error": "Not Found"} (a STRING), so `code` is None."""
     server.queue("POST", "/api/v1/scan", _Stub(404, load_fixture("error.route-not-found.json")))
-    client = Client(api_key=API_KEY, base_url=server.base_url)
+    client = Unpii(api_key=API_KEY, base_url=server.base_url)
 
     with pytest.raises(UnpiiError) as exc_info:
         client.scan("some text")
@@ -201,7 +201,7 @@ def test_anonymize_file_multipart_field_order_and_parsing(server: _StubServer) -
     server.queue(
         "POST", "/api/v1/anonymize-file", _Stub(200, load_fixture("anonymize-file.docx.json"))
     )
-    client = Client(api_key=API_KEY, base_url=server.base_url)
+    client = Unpii(api_key=API_KEY, base_url=server.base_url)
 
     result = client.anonymize_file(
         b"fake docx bytes",
@@ -246,7 +246,7 @@ def test_anonymize_file_omits_optional_fields_when_not_given(server: _StubServer
     server.queue(
         "POST", "/api/v1/anonymize-file", _Stub(200, load_fixture("anonymize-file.docx.json"))
     )
-    client = Client(api_key=API_KEY, base_url=server.base_url)
+    client = Unpii(api_key=API_KEY, base_url=server.base_url)
 
     client.anonymize_file(b"bytes", filename="a.docx")
 
@@ -265,7 +265,7 @@ def test_limits_returns_parsed_dict_verbatim(server: _StubServer) -> None:
     server.queue(
         "GET", "/api/v1/limits", _Stub(200, json.dumps(payload).encode("utf-8"))
     )
-    client = Client(api_key=API_KEY, base_url=server.base_url)
+    client = Unpii(api_key=API_KEY, base_url=server.base_url)
 
     result = client.limits()
 
@@ -280,7 +280,7 @@ def test_402_tier_required_body_shape(server: _StubServer) -> None:
     server.queue(
         "POST", "/api/v1/anonymize", _Stub(402, load_fixture("error.tier-required.json"))
     )
-    client = Client(api_key=API_KEY, base_url=server.base_url)
+    client = Unpii(api_key=API_KEY, base_url=server.base_url)
 
     with pytest.raises(UnpiiError) as exc_info:
         client.anonymize("text", marker_format="default")
@@ -296,7 +296,7 @@ def test_404_route_not_found_string_error_shape(server: _StubServer) -> None:
     server.queue(
         "POST", "/api/v1/anonymize", _Stub(404, load_fixture("error.route-not-found.json"))
     )
-    client = Client(api_key=API_KEY, base_url=server.base_url)
+    client = Unpii(api_key=API_KEY, base_url=server.base_url)
 
     with pytest.raises(UnpiiError) as exc_info:
         client.anonymize("text")
@@ -307,7 +307,7 @@ def test_404_route_not_found_string_error_shape(server: _StubServer) -> None:
 
 def test_non_json_body_raises_unpii_error(server: _StubServer) -> None:
     server.queue("POST", "/api/v1/anonymize", _Stub(500, b"<html>not json at all</html>"))
-    client = Client(api_key=API_KEY, base_url=server.base_url)
+    client = Unpii(api_key=API_KEY, base_url=server.base_url)
 
     with pytest.raises(UnpiiError) as exc_info:
         client.anonymize("text")
@@ -318,7 +318,7 @@ def test_non_json_body_raises_unpii_error(server: _StubServer) -> None:
 
 def test_empty_body_raises_unpii_error(server: _StubServer) -> None:
     server.queue("POST", "/api/v1/anonymize", _Stub(500, b""))
-    client = Client(api_key=API_KEY, base_url=server.base_url)
+    client = Unpii(api_key=API_KEY, base_url=server.base_url)
 
     with pytest.raises(UnpiiError) as exc_info:
         client.anonymize("text")
@@ -334,7 +334,7 @@ def test_error_message_never_contains_body_or_input(server: _StubServer) -> None
         {"error": {"code": "boom", "message": body_message, "original": secret_input}}
     ).encode("utf-8")
     server.queue("POST", "/api/v1/anonymize", _Stub(500, poisoned_body))
-    client = Client(api_key=API_KEY, base_url=server.base_url)
+    client = Unpii(api_key=API_KEY, base_url=server.base_url)
 
     with pytest.raises(UnpiiError) as exc_info:
         client.anonymize(secret_input)
@@ -354,7 +354,7 @@ def test_request_id_read_from_header(server: _StubServer) -> None:
         "/api/v1/anonymize",
         _Stub(402, load_fixture("error.tier-required.json"), headers={"x-request-id": "req-xyz"}),
     )
-    client = Client(api_key=API_KEY, base_url=server.base_url)
+    client = Unpii(api_key=API_KEY, base_url=server.base_url)
 
     with pytest.raises(UnpiiError) as exc_info:
         client.anonymize("text", marker_format="default")
@@ -368,7 +368,7 @@ def test_request_id_read_from_header(server: _StubServer) -> None:
 @pytest.mark.parametrize("bad_key", ["", "   ", "\t\n"])
 def test_empty_api_key_raises(bad_key: str) -> None:
     with pytest.raises(UnpiiError) as exc_info:
-        Client(api_key=bad_key)
+        Unpii(api_key=bad_key)
 
     assert exc_info.value.code == "missing_api_key"
     assert exc_info.value.status == 0
@@ -382,7 +382,7 @@ def test_env_base_url_is_never_read(server: _StubServer, monkeypatch: pytest.Mon
     assert os.environ["UNPII_BASE_URL"] == "http://127.0.0.1:1"
 
     server.queue("GET", "/api/v1/limits", _Stub(200, b"{}"))
-    client = Client(api_key=API_KEY, base_url=server.base_url)
+    client = Unpii(api_key=API_KEY, base_url=server.base_url)
 
     client.limits()  # must reach the stub server, not the env value
 

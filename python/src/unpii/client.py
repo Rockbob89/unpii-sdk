@@ -66,7 +66,7 @@ class AnonymizeResult:
 class ScanResult:
     """POST /api/v1/scan response — same as AnonymizeResult minus the
     rendered `anonymized` text. The route does not exist on today's server;
-    see Client.scan()'s docstring."""
+    see Unpii.scan()'s docstring."""
 
     spans: list[Span]
     uncertain_spans: list[Span]
@@ -157,7 +157,7 @@ def _warning_from_wire(data: dict[str, Any]) -> FileWarning:
     return FileWarning(code=data["code"], detail=data["detail"])
 
 
-class Client:
+class Unpii:
     """Talks to a single unpii deployment. One instance per API key."""
 
     def __init__(
