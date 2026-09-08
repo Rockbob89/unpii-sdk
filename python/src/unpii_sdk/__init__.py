@@ -2,7 +2,7 @@
 
 Zero runtime dependencies (standard library only).
 
-    from unpii import Unpii, restore
+    from unpii_sdk import Unpii, restore
 
     res = Unpii(api_key=os.environ["UNPII_API_KEY"]).anonymize("Hallo Anne Schmitz")
     back = restore(answer_from_llm, res.spans)

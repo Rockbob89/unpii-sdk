@@ -1,4 +1,4 @@
-"""Tests for unpii.client.Unpii against a real local HTTP server (stdlib
+"""Tests for unpii_sdk.client.Unpii against a real local HTTP server (stdlib
 http.server), using response fixtures captured from the real unpii.me API —
 see fixtures/README.md for exact provenance. Never hand-written stubs for
 the error shapes: a hand-written stub is what let a real integration bug
@@ -22,8 +22,8 @@ from typing import Any
 
 import pytest
 
-from unpii.client import Unpii
-from unpii.errors import UnpiiError
+from unpii_sdk.client import Unpii
+from unpii_sdk.errors import UnpiiError
 
 FIXTURES_DIR = Path(__file__).resolve().parent.parent.parent / "fixtures"
 PYPROJECT_PATH = Path(__file__).resolve().parent.parent / "pyproject.toml"
