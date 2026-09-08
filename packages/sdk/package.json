@@ -1,6 +1,6 @@
 {
   "name": "@unpii/sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "TypeScript client for the unpii.me API: anonymize text and files, and restore markers back to their originals.",
   "license": "Apache-2.0",
