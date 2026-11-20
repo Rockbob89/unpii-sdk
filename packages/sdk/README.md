@@ -124,6 +124,20 @@ the code and the status, nothing else. That is not politeness: an error message 
 in issue trackers and in screenshots, and this SDK exists to keep personal data out of exactly
 those places.
 
+## Upgrading to 0.2.0
+
+- **Plan keys.** `docs` and `api` are one plan now, `plus`. In `limits()`, `current.tier` and the
+  keys of `reference.web` / `reference.api` read `anon | free | plus | pro | ultra`. Code that
+  reads `reference.web.docs` or compares `tier === "api"` needs updating.
+- **New response fields.** Anonymize responses carry `stats.counts`, `stats.uncertainCount`,
+  `stats.structure` and `receipt` (nullable), and spans may carry `source`. The generated types
+  declare them as present because that is the server's contract; a server that has not been
+  updated yet does not send them, so read them defensively until it has.
+- **`UnpiiBusyError`** is a subclass of `UnpiiError`: an existing `catch` / `instanceof
+  UnpiiError` keeps catching it.
+- `markerFormat: "pseudonym"` exists now (text only); `keep` and `structure` are evaluated by the
+  server instead of ignored.
+
 ## What this package does not do
 
 No runtime dependencies - Node 22 already has `fetch`, `FormData` and `Blob`. Check the

@@ -110,7 +110,7 @@ again is your call, `retry_after` is the server's hint:
 try:
     result = client.anonymize(text)
 except UnpiiBusyError as err:
-    time.sleep(err.retry_after or 5)  # then try once more, or give up
+    time.sleep(err.retry_after if err.retry_after is not None else 5)  # then try once more, or give up
 ```
 
 A different 503, `inference_unavailable`, means the model could not be reached and stays a plain
@@ -120,6 +120,18 @@ A different 503, `inference_unavailable`, means the model could not be reached a
 the code and the status, nothing else. That is not politeness: an error message ends up in logs,
 in issue trackers and in screenshots, and this package exists to keep personal data out of
 exactly those places.
+
+## Upgrading to 0.2.0
+
+- **Plan keys.** `docs` and `api` are one plan now, `plus`. In `limits()`, `current["tier"]` and
+  the keys of `reference["web"]` / `reference["api"]` read `anon | free | plus | pro | ultra`.
+- **`structure` is a string.** `structure=True` is no longer valid (the server never accepted a
+  bool); pass `"auto"`, `"text"`, `"json"` or `"csv"`.
+- **New response fields** (`counts`, `uncertainCount`, `structure`, `receipt`) exist on the wire
+  but are not parsed into the result dataclasses; the server only sends them after its next
+  deploy.
+- **`UnpiiBusyError`** is a subclass of `UnpiiError`: an existing `except UnpiiError` keeps
+  catching it.
 
 ## What this package does not do
 

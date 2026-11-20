@@ -20,11 +20,15 @@ export interface AnonymizeOptions {
   markerFormat?: MarkerFormat;
   ambiguous?: AmbiguousMode;
   /**
-   * Categories to detect but leave as plain text (`DATE`, `URL`; typed loosely, the server validates). Pro and Ultra only: below that
-   * the server answers 402 `tier_required` rather than ignoring the field.
+   * Categories to detect but leave as plain text (`DATE`, `URL`; typed loosely, the server
+   * validates). Pro and Ultra only: below that the server answers 402 `tier_required` rather
+   * than ignoring the field.
    */
   keep?: string[];
-  /** `auto` | `text` | `json` | `csv` (typed loosely, the server validates). Below Plus the server forces `text` without an error. */
+  /**
+   * `auto` | `text` | `json` | `csv` (typed loosely, the server validates). Below Plus the
+   * server forces `text` without an error.
+   */
   structure?: string;
 }
 

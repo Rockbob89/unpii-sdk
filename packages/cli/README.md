@@ -108,3 +108,9 @@ rather than a bare HTTP error.
 ## Licence
 
 Apache-2.0
+
+## Upgrading to 0.2.0
+
+A busy server (503) now gets its own sentence with the wait time the server asked for; exit code
+stays 1 and the CLI never retries by itself. `--marker pseudonym` is accepted (text only).
+`--keep` is evaluated by the server (Pro and Ultra) instead of ignored. Nothing else changes.

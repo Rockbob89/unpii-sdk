@@ -261,7 +261,7 @@ def test_anonymize_file_omits_optional_fields_when_not_given(server: _StubServer
 
 
 def test_limits_returns_parsed_dict_verbatim(server: _StubServer) -> None:
-    payload = {"current": {"tier": "docs"}, "reference": {"web": {}}, "burst": {}}
+    payload = {"current": {"tier": "plus"}, "reference": {"web": {}}, "burst": {}}
     server.queue(
         "GET", "/api/v1/limits", _Stub(200, json.dumps(payload).encode("utf-8"))
     )

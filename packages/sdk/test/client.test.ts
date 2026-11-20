@@ -269,7 +269,7 @@ describe("Unpii client", () => {
   // 503 `server_busy` is the overload gate's refusal. Its body is `{ error: "server_busy",
   // message }` - `error` is a STRING, like Fastify's own envelope, so the old object-only
   // extraction read it as "no code". The shape is derived from the server source
-  // (apps/api/src/lib/admission-gates.ts `replyServerBusy`) and the contract's 503 entry, not a
+  // (`replyServerBusy`) and the contract's 503 entry, not a
   // recording: the overload gate is not on production yet (see fixtures/README.md).
   describe("503 server_busy", () => {
     const BUSY_BODY = JSON.stringify({
