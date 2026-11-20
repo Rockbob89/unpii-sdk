@@ -89,6 +89,23 @@ describe("message functions: German and English differ, both non-empty", () => {
     expect(de).not.toBe(en);
   });
 
+  it("apiErrorMessage names the Retry-After seconds for a busy server, in both languages", () => {
+    for (const lang of ["de", "en"] as const) {
+      const withHint = apiErrorMessage(
+        { code: "server_busy", status: 503, retryAfterSeconds: 12 },
+        lang,
+      );
+      const without = apiErrorMessage(
+        { code: "server_busy", status: 503, retryAfterSeconds: undefined },
+        lang,
+      );
+      expect(withHint, lang).toContain("12");
+      expect(without, lang).not.toMatch(/\d/);
+      expect(without, lang).not.toContain("undefined");
+      expect(withHint.endsWith("\n"), lang).toBe(true);
+    }
+  });
+
   it("apiErrorMessage, for the unmapped-code fallback", () => {
     const err: Pick<UnpiiError, "code" | "status"> = { code: undefined, status: 503 };
     const de = apiErrorMessage(err, "de");
@@ -157,8 +174,8 @@ describe("message functions: German and English differ, both non-empty", () => {
   });
 
   it("invalidMarkerMessage", () => {
-    const de = invalidMarkerMessage("bogus", "default, custom, xxxxx, blackbar", "de");
-    const en = invalidMarkerMessage("bogus", "default, custom, xxxxx, blackbar", "en");
+    const de = invalidMarkerMessage("bogus", "default, custom, xxxxx, blackbar, pseudonym", "de");
+    const en = invalidMarkerMessage("bogus", "default, custom, xxxxx, blackbar, pseudonym", "en");
     expect(de.trim().length).toBeGreaterThan(0);
     expect(en.trim().length).toBeGreaterThan(0);
     expect(de).not.toBe(en);

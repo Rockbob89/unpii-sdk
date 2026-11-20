@@ -74,6 +74,10 @@ export const API_ERROR_MESSAGES: Record<Lang, Record<string, string>> = {
     invalid_field: "Ungueltiger Feldwert in der Anfrage.",
     custom_rules_timeout: "Eigene Regeln haben das Zeitlimit ueberschritten.",
     processing_error: "Verarbeitung fehlgeschlagen.",
+    server_busy: "Der Dienst ist gerade voll und hat diese Anfrage nicht bearbeitet.",
+    inference_unavailable:
+      "Das Modell ist gerade nicht erreichbar. Bitte spaeter erneut versuchen.",
+    unsupported_marker_format: "Dieses Markerformat ist fuer Dateien nicht verfuegbar.",
   },
   en: {
     account_tier_required: "This API key needs a paid plan.",
@@ -92,6 +96,9 @@ export const API_ERROR_MESSAGES: Record<Lang, Record<string, string>> = {
     invalid_field: "Invalid field value in the request.",
     custom_rules_timeout: "Custom rules exceeded the time limit.",
     processing_error: "Processing failed.",
+    server_busy: "The service is full right now and did not process this request.",
+    inference_unavailable: "The model is not reachable right now. Please try again later.",
+    unsupported_marker_format: "This marker format is not available for files.",
   },
 };
 
@@ -134,11 +141,21 @@ export function scanNotAvailableMessage(lang: Lang = resolveLang(process.env)): 
  * itself is already code+status only, see errors.ts) nor any response body — only `err.code` and
  * `err.status`, which is exactly the shape this function accepts. */
 export function apiErrorMessage(
-  err: Pick<UnpiiError, "code" | "status">,
+  err: Pick<UnpiiError, "code" | "status"> & { retryAfterSeconds?: number | undefined },
   lang: Lang = resolveLang(process.env),
 ): string {
   const sentence = err.code !== undefined ? API_ERROR_MESSAGES[lang][err.code] : undefined;
-  return `${sentence ?? unknownErrorMessage(err.status, lang)}\n`;
+  const base = sentence ?? unknownErrorMessage(err.status, lang);
+  // The server's own "wait this long" hint, for the one code that means "later, not never".
+  // The CLI never retries by itself; the number is for the person or script that does.
+  if (err.code === "server_busy" && err.retryAfterSeconds !== undefined) {
+    const hint =
+      lang === "de"
+        ? `Bitte in ${err.retryAfterSeconds} s erneut versuchen.`
+        : `Please try again in ${err.retryAfterSeconds} s.`;
+    return `${base} ${hint}\n`;
+  }
+  return `${base}\n`;
 }
 
 /** One sentence naming the X-RateLimit-* headers, when the response carried them. */
@@ -194,9 +211,9 @@ Optionen:
   --out <pfad>       Ergebnis in eine Datei schreiben statt nach stdout
   --scan             nur die gefundenen Spans als Tabelle, ohne den Text
   --json             die volle API-Antwort unveraendert ausgeben (fuer restore)
-  --marker <format>  default | custom | xxxxx | blackbar
+  --marker <format>  default | custom | xxxxx | blackbar | pseudonym
   --keep <a,b,...>   Kategorien kommagetrennt von der Schwaerzung ausnehmen
-                     (der aktuelle Server ignoriert diese Option noch)
+                     (nur Pro und Ultra; darunter antwortet der Server mit 402)
   --from <pfad>      (nur bei restore) eine gespeicherte --json-Antwort
   --help             diese Hilfe
   --version          Versionsnummer
@@ -235,9 +252,9 @@ Options:
   --out <path>       write the result to a file instead of stdout
   --scan             only the found spans as a table, without the text
   --json             print the full API response unchanged (for restore)
-  --marker <format>  default | custom | xxxxx | blackbar
+  --marker <format>  default | custom | xxxxx | blackbar | pseudonym
   --keep <a,b,...>   comma-separated categories to exclude from redaction
-                     (the current server still ignores this option)
+                     (Pro and Ultra only; the server answers 402 below that)
   --from <path>      (restore only) a saved --json response
   --help             this help
   --version          version number

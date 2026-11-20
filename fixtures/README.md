@@ -36,7 +36,19 @@ What distinguishes the two success captures is not just the tier: the anonymous 
 the markers (`xxxxx`) and uses the category `REDACTED` instead of the real category. The SDK has
 to pass both forms through without incident, which is why both are here.
 
+## Tier names in the table are the tiers of the capture day
+
+The captures are from 2026-09-07, when the paid tiers were still called `docs` and `api`. Since
+2026-11-17 those two are one tier, `plus` (free, plus, pro, ultra). The captured JSON does not
+carry a tier name in its success bodies, so nothing in it is stale; only the "Caller" column
+above names the old tier, and stays as the record of how the file was made.
+
 ## What is NOT here
+
+There is no capture for `503 server_busy` (the overload gate's refusal, `error` a string plus a
+`Retry-After` header in seconds). The gate is not on production yet. The tests build that
+response by hand from the server source (`replyServerBusy`) and the contract's 503 entry, and
+say so; replace them with a capture once a deployed server can be made to refuse.
 
 There is no capture for `POST /api/v1/scan`, because the route does not exist yet on the server
 this was captured against. `Unpii.scan()` is built against the contract hand-typed in this repo

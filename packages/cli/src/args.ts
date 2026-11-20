@@ -11,7 +11,13 @@ import {
  * compiler: adding a value here that isn't part of the imported type is a type error. There is
  * no runtime way to enumerate a string-literal union, so this array is the one place that has
  * to be listed by hand. */
-const MARKER_FORMATS: readonly MarkerFormat[] = ["default", "custom", "xxxxx", "blackbar"];
+const MARKER_FORMATS: readonly MarkerFormat[] = [
+  "default",
+  "custom",
+  "xxxxx",
+  "blackbar",
+  "pseudonym",
+];
 
 /** Thrown for anything wrong with how the tool was invoked — an unknown flag, a bad `--marker`
  * value, too many positionals, `restore` without `--from`. The caller (`run.ts`/`cli.ts`) turns

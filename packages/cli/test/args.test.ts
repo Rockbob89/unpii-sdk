@@ -39,7 +39,7 @@ describe("parseArgs()", () => {
   });
 
   it("--marker <format> accepts every real MarkerFormat value", () => {
-    for (const format of ["default", "custom", "xxxxx", "blackbar"] as const) {
+    for (const format of ["default", "custom", "xxxxx", "blackbar", "pseudonym"] as const) {
       const parsed = parseArgs(["--marker", format]);
       expect(parsed).toMatchObject({ marker: format });
     }
@@ -146,6 +146,9 @@ describe("API_ERROR_MESSAGES / apiErrorMessage()", () => {
     "invalid_field",
     "custom_rules_timeout",
     "processing_error",
+    "server_busy",
+    "inference_unavailable",
+    "unsupported_marker_format",
   ].sort();
 
   it("both languages cover exactly the codes the server actually emits (anonymize.ts / anonymize-file.ts)", () => {

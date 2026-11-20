@@ -50,6 +50,13 @@ function startStubServer(): Promise<{ url: string; close: () => Promise<void> }>
       res.setHeader("X-RateLimit-Reset", String(Math.floor(Date.now() / 1000) + 30));
       const auth = req.headers.authorization ?? "";
       if (req.url === "/api/v1/anonymize") {
+        if (auth.includes("busy-key")) {
+          // Shape from the server source (`replyServerBusy`), not a recording - see
+          // fixtures/README.md.
+          res.writeHead(503, { "Content-Type": "application/json", "Retry-After": "12" });
+          res.end(JSON.stringify({ error: "server_busy", message: "SERVER-BODY-MESSAGE" }));
+          return;
+        }
         if (auth.includes("error-key")) {
           res.writeHead(402, { "Content-Type": "application/json" });
           res.end(ERROR_FIXTURE);
@@ -144,6 +151,30 @@ describe("unpii CLI (spawned dist/cli.js against a local fixture server)", () =>
     expect(result.status).toBe(0);
     expect(result.stdout.toString("utf8")).toBe(DOCS_PARSED.anonymized);
     expect(result.stderr.toString("utf8")).not.toContain("Anne Schmitz");
+  });
+
+  it("503 server_busy -> one 'try again later' sentence with the Retry-After seconds, exit 1, no retry", async () => {
+    const en = await runCliBin([], {
+      input: "Anne Schmitz",
+      env: { UNPII_API_KEY: "busy-key", UNPII_BASE_URL: server.url, LANG: "en_US.UTF-8" },
+    });
+    expect(en.status).toBe(1);
+    expect(en.stdout.length).toBe(0);
+    const enErr = en.stderr.toString("utf8");
+    expect(enErr).toContain("again in 12 s");
+    expect(enErr).toContain("12");
+    expect(enErr).not.toContain("SERVER-BODY-MESSAGE");
+    expect(enErr).not.toContain("server_busy");
+    expect(enErr).not.toContain("Anne Schmitz");
+
+    const de = await runCliBin([], {
+      input: "Anne Schmitz",
+      env: { UNPII_API_KEY: "busy-key", UNPII_BASE_URL: server.url, LANG: "de_DE.UTF-8" },
+    });
+    expect(de.status).toBe(1);
+    const deErr = de.stderr.toString("utf8");
+    expect(deErr).toContain("12");
+    expect(deErr).not.toBe(enErr);
   });
 
   it("--json -> stdout parses to the fixture object unchanged", async () => {
