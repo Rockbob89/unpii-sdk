@@ -34,11 +34,47 @@ class UnpiiError(Exception):
             "tier_required"), or None when the body carried no such code, an
             unrecognized shape, or wasn't parseable at all.
         request_id: The `x-request-id` response header, when present.
+        retry_after: Seconds from a `Retry-After` response header (503
+            `server_busy`, 429 `custom_rules_busy`, ...), or None when it was
+            absent or not a plain non-negative integer. The HTTP-date form is
+            deliberately not parsed: the server only ever sends seconds.
     """
 
-    def __init__(self, status: int, code: str | None, request_id: str | None = None) -> None:
+    def __init__(
+        self,
+        status: int,
+        code: str | None,
+        request_id: str | None = None,
+        retry_after: int | None = None,
+    ) -> None:
         self.status = status
         self.code = code if code is not None and _CODE_RE.match(code) else None
         self.request_id = request_id
+        self.retry_after = retry_after
         message = f"unpii: {self.code} (HTTP {status})" if self.code else f"unpii: HTTP {status}"
         super().__init__(message)
+
+
+class UnpiiBusyError(UnpiiError):
+    """Raised for 503 `server_busy`: the service is full right now and refused
+    the request before doing any work. "Try again later" - not a fault in the
+    request and not an outage; a different 503, `inference_unavailable` (model
+    unreachable), stays a plain `UnpiiError`. The client never retries by
+    itself: whether and when to try again is the caller's decision,
+    `retry_after` is the server's hint for it."""
+
+    def __init__(
+        self, status: int, request_id: str | None = None, retry_after: int | None = None
+    ) -> None:
+        super().__init__(status, "server_busy", request_id, retry_after)
+
+
+_RETRY_AFTER_RE = re.compile(r"^[0-9]{1,6}$")
+
+
+def parse_retry_after(value: str | None) -> int | None:
+    """Digits only, at most 6 of them (about 11 days); anything else is None."""
+    if value is None:
+        return None
+    stripped = value.strip()
+    return int(stripped) if _RETRY_AFTER_RE.match(stripped) else None

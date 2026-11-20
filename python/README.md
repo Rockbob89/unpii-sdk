@@ -86,16 +86,35 @@ Unpii(api_key, base_url="https://unpii.me", timeout=120.0)
   had to remember.
 - `limits()` - your plan's daily limits and what the other plans allow.
 
-`keep` and `structure` are accepted today and honoured by a later server release; the current
-server ignores fields it does not know, so passing them costs nothing.
+`keep` (`["DATE"]`, `["URL"]` or both) leaves those categories as plain text and needs a Pro or
+Ultra plan; below that the server answers 402 `tier_required`. `structure` (`"auto"`, `"text"`,
+`"json"`, `"csv"`, a string) preserves JSON/CSV formatting from the Plus plan upward and is
+quietly treated as `"text"` below it. `marker_format="pseudonym"` (Pro and Ultra, text only, not
+for files) replaces names and addresses with invented ones.
 
 Wire fields are camelCase, Python names are snake_case; the mapping happens in one place, and
 unknown fields are ignored rather than fatal.
 
 ## Errors
 
-Any non-2xx response raises `UnpiiError` with `status`, `code` and `request_id`. So does a
+Any non-2xx response raises `UnpiiError` with `status`, `code`, `request_id` and `retry_after`
+(seconds from the `Retry-After` header when it is plain seconds, else `None`). So does a
 connection failure, so `except UnpiiError` really is enough.
+
+**A busy server is its own type.** When the service is full it answers 503 `server_busy` with a
+`Retry-After` header and has done no work yet; the client raises `UnpiiBusyError` (a subclass of
+`UnpiiError`, `code == "server_busy"`). The client does not retry for you - waiting and trying
+again is your call, `retry_after` is the server's hint:
+
+```python
+try:
+    result = client.anonymize(text)
+except UnpiiBusyError as err:
+    time.sleep(err.retry_after or 5)  # then try once more, or give up
+```
+
+A different 503, `inference_unavailable`, means the model could not be reached and stays a plain
+`UnpiiError`.
 
 **The message never contains the response body and never contains your input.** It is built from
 the code and the status, nothing else. That is not politeness: an error message ends up in logs,
