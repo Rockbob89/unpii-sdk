@@ -1,14 +1,14 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "title": "anonymize API",
+    "title": "unpii API",
     "version": "0.1.0",
     "description": "Privacy-first PII redaction API. v1 contract."
   },
   "servers": [
     {
-      "url": "https://anonymize.example",
-      "description": "production (placeholder)"
+      "url": "https://unpii.me",
+      "description": "production"
     },
     {
       "url": "http://localhost:3001",
@@ -18,7 +18,7 @@
   "paths": {
     "/api/v1/anonymize": {
       "post": {
-        "description": "Anonymize text: detect PII spans and return the rendered `anonymized` field plus the structured spans for client-side customization. The optional `markerFormat` selects the render format; tier gating applies (Free: xxxxx/blackbar; paid tiers Docs/API/Pro/Ultra: also `default`; Pro/Ultra additionally: `custom`). Omit `markerFormat` to fall back to the caller's user-profile preference, then to the tier default. The optional `ambiguous` field controls how low-confidence detections (the UNKLAR/ambiguous layer) render in `anonymized`: `redact` (default) splices them in as `[UNKLAR_n]` — masked formats (xxxxx/blackbar) mask them exactly like any other span; `mark` inlines the original text alongside the marker as `[UNKLAR_n: original]`; `keep` leaves them as plaintext, the legacy behavior. `redact` is the default because uncertain detections used to reach every caller as plaintext regardless of tier — a leak this field closes; older or generic callers that omit it get the safe default automatically. `uncertainSpans` (offsets, category, score) is returned in ALL three modes, unaffected by this field. Its `id` is a per-category preview counter independent of the `[UNKLAR_n]` numbering in `anonymized` (that one runs under a single shared `UNKLAR` label) — correlate an `uncertainSpans[]` entry to its marker in the text (or vice versa) by `start`/`end`, which is exact and present in both regardless of mode.",
+        "description": "Anonymize text: detect PII spans and return the rendered `anonymized` field plus the structured spans for client-side customization. The optional `markerFormat` selects the render format; tier gating applies (Free: xxxxx/blackbar; paid tiers Plus/Pro/Ultra: also `default`; Pro/Ultra additionally: `custom` and `pseudonym`). `pseudonym` replaces PERSON and ADDRESS spans with an invented name instead of the bracketed marker; every other category still renders as `[LABEL_n]`. Omit `markerFormat` to fall back to the caller's user-profile preference, then to the tier default. The optional `ambiguous` field controls how low-confidence detections (the UNKLAR/ambiguous layer) render in `anonymized`: `redact` (default) splices them in as `[UNKLAR_n]` — masked formats (xxxxx/blackbar) mask them exactly like any other span; `mark` inlines the original text alongside the marker as `[UNKLAR_n: original]`; `keep` leaves them as plaintext, the legacy behavior. `redact` is the default because uncertain detections used to reach every caller as plaintext regardless of tier — a leak this field closes; older or generic callers that omit it get the safe default automatically. `uncertainSpans` (offsets, category, score) is returned in ALL three modes, unaffected by this field. Its `id` is a per-category preview counter independent of the `[UNKLAR_n]` numbering in `anonymized` (that one runs under a single shared `UNKLAR` label) — correlate an `uncertainSpans[]` entry to its marker in the text (or vice versa) by `start`/`end`, which is exact and present in both regardless of mode. `stats.counts` gives distinct markers per category over `spans` (a person mentioned three times counts once), `REDACTED`-only for anon/Free; `stats.uncertainCount` is the same count over `uncertainSpans`. Each entry in `spans`/`uncertainSpans` may carry a `source` (`model`, `rule`, `custom_rule`, `coreference`, `propagation`, `gazetteer`, `anchor`), stripped for anon/Free along with the real category. `receipt` is a signed, third-party-verifiable proof of this response's `anonymized` output — present from the Plus tier upward, `null` below that; verify it with the key from `GET /receipts/public-key`.\n\nThe optional `structure` field requests JSON/CSV format preservation instead of the line-for-line prose rewrite. `auto` (default) detects JSON or CSV on the server; `text`/`json`/`csv` force a specific path. On a structure-aware run, `anonymized` is the ORIGINAL text with PII replaced in place — formatting, key order, and indentation are byte-for-byte unchanged, and `spans[].start`/`end` still index into the input exactly as they do on the text path. Object keys are scanned like any other value (a key can itself be an email address); a JSON value of type NUMBER that a span matches (a phone number stored as a number, say) is rewritten to a quoted string marker so the document stays valid JSON — a documented type change, not a bug. Below Plus, `structure` is silently forced to `text` rather than rejected: recognition runs for every tier, format-preserving output is a Plus-and-up feature. `stats.structure` in the response always reports what actually ran, which can differ from what was requested (a scanner failure on malformed input falls back the same way).\n\nThe optional `keep` field names categories to DETECT but leave as plain text: `DATE`, `URL`, or both. A kept category is removed from `spans`, `uncertainSpans` and `stats.counts` entirely and its text is untouched in `anonymized` — it is not marked, masked, or counted. `stats.kept` lists what was kept, and is absent when nothing was, so a reader can tell \"no dates in this text\" apart from \"dates left standing on purpose\". Recognition itself runs on every tier; only keeping is paid, so this field requires Pro or Ultra and is REJECTED with 402 `tier_required` (`field: \"keep\"`, `required: \"pro\"`) below that rather than being ignored — unlike `structure`, which downgrades silently, ignoring `keep` would redact MORE than the caller asked for without telling them. An empty array is the same as omitting the field and is accepted on any tier. Naming any other category (PERSON, EMAIL, PHONE, ADDRESS, ACCOUNT, SECRET) is a 400: this is a narrow exemption, not a general opt-out of redaction. **Note what the categories cover:** our internal category set is coarser than the model's own labels, so `DATE` also covers dates of birth and times of day, and `URL` also covers IP addresses. Keeping either keeps all of it.\n\nThe optional `applyCustomRules` and `applyAllowlist` fields let a caller skip its own saved custom redaction rules and/or allowlist for this one request. Both default to `true` (today's behavior — the account's rules/allowlist load and apply exactly as before); `false` skips loading the corresponding list for this request only, leaving the stored rows untouched. Neither is tier-gated: below Plus neither list is ever loaded regardless of what is sent here. Not available on `/anonymize-file`.",
         "summary": "Anonymize text",
         "tags": ["anonymize"],
         "security": [
@@ -88,7 +88,7 @@
             }
           },
           "402": {
-            "description": "Tier required. Two distinct cases: (1) `code: 'tier_required'` — the requested `markerFormat` is not available on the caller's tier (body adds `markerFormat`, `tier`); (2) `code: 'account_tier_required'` — the API key is valid, but the account it belongs to has no API access on the Free plan (body adds `tier: 'free'`, `channel: 'api'`). The key itself is not revoked - upgrading the account to Docs or above reactivates it."
+            "description": "Tier required. Two distinct cases: (1) `code: 'tier_required'` — the requested `markerFormat` is not available on the caller's tier (body adds `markerFormat`, `tier`); (2) `code: 'account_tier_required'` — the API key is valid, but the account it belongs to has no API access on the Free plan (body adds `tier: 'free'`, `channel: 'api'`). The key itself is not revoked - upgrading the account to Plus or above reactivates it."
           },
           "413": {
             "description": "Text exceeds the caller's tier char limit"
@@ -97,14 +97,34 @@
             "description": "`code: 'custom_rules_timeout'` — one or more of the caller's active custom rules exceeded the anonymize-time processing budget against this request's text (defense in depth: a pattern that passed save-time validation but still backtracks catastrophically at runtime). Fails closed — the request is rejected rather than silently completing with custom rules skipped. Review and adjust the offending custom rule(s); the response never names the pattern or request text."
           },
           "429": {
-            "description": "Rate limit exceeded"
+            "description": "Rate limit exceeded. Also `code: 'custom_rules_busy'` (with `Retry-After`): this account already has the maximum number of custom-rule requests queued; nothing is wrong with the rules - wait and retry."
+          },
+          "503": {
+            "description": "Overloaded or unavailable. `error: 'server_busy'` (with `Retry-After`, seconds): the service is full right now and turned this request away before doing any work - it consumed no daily quota (the short-window limit keeps counting); retry after the given delay. `error: 'inference_unavailable'` (with `Retry-After`): the model could not be reached; the call is not counted against the daily quota either.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": ["server_busy"]
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["error", "message"]
+                }
+              }
+            }
           }
         }
       }
     },
     "/api/v1/anonymize-file": {
       "post": {
-        "description": "Anonymize a Word document (.docx, max 10 MB) or a PDF (.pdf, max 20 MB and 500 pages). The output is always rebuilt from scratch with all detected PII replaced by markers — only deliberately extracted content reaches it, so hidden data (comments, tracked changes, metadata, embedded objects) is removed by construction, and no original content stream survives underneath a redaction.\n\n**PDF input** is read through its text layer and returned as paragraphs and page breaks. Layout, tables, columns, headers/footers and images are NOT preserved — tables and columns come back as ordinary paragraphs in reading order, and every PDF response carries a `pdf_layout_flattened` warning saying so. A scanned PDF with no text layer is rejected (`no_text_layer`); there is no OCR.\n\nMultipart upload with a `file` part, an optional `markerFormat` field (same tier gating as /anonymize), an optional `redactUncertain` field, and an optional `outputFormat` field. Send every field BEFORE the file part — fields after the file are not reliably parsed. Requires a paid plan (Docs and up); anonymous callers are rejected. Degradations (omitted footnotes, merged cells, flattened PDF layout, ...) are reported honestly in `warnings`.\n\n`redactUncertain` is `\"true\"` | `\"false\"` (strict — any other value 400s), default `\"false\"`: when `\"true\"`, low-confidence detections are ALSO replaced in the output; either way they are always listed in `uncertainSpans` for review.\n\n`outputFormat` is `\"docx\"` | `\"text\"` (strict) and applies to PDF input only. It defaults to `\"text\"` on the API-key channel and `\"docx\"` on the browser channel. With `\"text\"` the response carries the anonymized string instead of a file, pages separated by a form feed (`\\f`, the pdftotext convention). A .docx upload has real structure to preserve and therefore has no text mode: asking for one returns 400 `unsupported_output_format`.",
+        "description": "Anonymize a Word document (.docx, max 10 MB) or a PDF (.pdf, max 20 MB and 500 pages). The output is always rebuilt from scratch with all detected PII replaced by markers — only deliberately extracted content reaches it, so hidden data (comments, tracked changes, metadata, embedded objects) is removed by construction, and no original content stream survives underneath a redaction.\n\n**PDF input** is read through its text layer and returned as paragraphs and page breaks. Layout, tables, columns, headers/footers and images are NOT preserved — tables and columns come back as ordinary paragraphs in reading order, and every PDF response carries a `pdf_layout_flattened` warning saying so. A scanned PDF with no text layer is rejected (`no_text_layer`); there is no OCR.\n\nMultipart upload with a `file` part, an optional `markerFormat` field, an optional `redactUncertain` field, and an optional `outputFormat` field. `markerFormat` follows the same tier gating as /anonymize, with one exception: `pseudonym` is not available here on any tier and always returns 400 `unsupported_marker_format` - a file rebuilt with invented names would look unredacted, with nothing on the page marking it as fiction. Send every field BEFORE the file part — fields after the file are not reliably parsed. Requires a paid plan (Plus and up); anonymous callers are rejected. Degradations (omitted footnotes, merged cells, flattened PDF layout, ...) are reported honestly in `warnings`.\n\n`redactUncertain` is `\"true\"` | `\"false\"` (strict — any other value 400s), default `\"false\"`: when `\"true\"`, low-confidence detections are ALSO replaced in the output; either way they are always listed in `uncertainSpans` for review.\n\n`outputFormat` is `\"docx\"` | `\"text\"` (strict) and applies to PDF input only. It defaults to `\"text\"` on the API-key channel and `\"docx\"` on the browser channel. With `\"text\"` the response carries the anonymized string instead of a file, pages separated by a form feed (`\\f`, the pdftotext convention). A .docx upload has real structure to preserve and therefore has no text mode: asking for one returns 400 `unsupported_output_format`.\n\n`stats.counts` (distinct markers per category over `spans`) and `stats.uncertainCount` (the same over `uncertainSpans`) use the identical counting rule as `/anonymize`'s, `REDACTED`-only for anon/Free. Each entry in `spans`/`uncertainSpans` may carry a `source` (`model`, `rule`, `custom_rule`, `coreference`, `propagation`, `gazetteer`, `anchor`), stripped for anon/Free along with the real category. The paid gate normally keeps a Free caller out of this endpoint, so that stripping is defence in depth rather than the usual path — an admin key bypasses the gate, and a corrupted tier value would too. `receipt` is a signed, third-party-verifiable proof over the returned document's bytes (or over `text` for `outputFormat=text`) — present from the Plus tier upward, `null` below that; verify it with the key from `GET /receipts/public-key`.",
         "summary": "Anonymize a .docx or .pdf file",
         "tags": ["anonymize"],
         "security": [
@@ -138,6 +158,11 @@
                     "type": "string",
                     "enum": ["docx", "text"],
                     "description": "PDF input only. Default \"text\" for API-key callers, \"docx\" for session callers. Rejected with 400 for .docx input."
+                  },
+                  "keep": {
+                    "type": "string",
+                    "description": "Comma-separated list of categories to detect but not redact: \"DATE\", \"URL\", or \"DATE,URL\". Pro/Ultra only — 402 `tier_required` with `field: \"keep\"` below that, never a silent downgrade. Any other value is a 400 `invalid_field`. Note that \"DATE\" also covers dates of birth and times, and \"URL\" also covers IP addresses.",
+                    "example": "DATE,URL"
                   }
                 },
                 "required": ["file"]
@@ -164,7 +189,7 @@
             }
           },
           "400": {
-            "description": "Not a valid .docx or .pdf (`invalid_file`; PDF parse failures carry `reason: \"INVALID_PDF\"`), missing file part, `redactUncertain`/`outputFormat` sent as an unsupported value (`invalid_field`), or `outputFormat=text` requested for .docx input (`unsupported_output_format`)"
+            "description": "Not a valid .docx or .pdf (`invalid_file`; PDF parse failures carry `reason: \"INVALID_PDF\"`), missing file part, `redactUncertain`/`outputFormat`/`keep` sent as an unsupported value (`invalid_field`), `outputFormat=text` requested for .docx input (`unsupported_output_format`), or `markerFormat=pseudonym` requested for a file, on any tier (`unsupported_marker_format`)"
           },
           "401": {
             "description": "Two distinct cases: (1) no Authorization header and no session cookie at all — files require an account, there is no anonymous upload; body is `{ error: { message: 'unauthenticated' } }`. (2) `code: 'invalid_api_key'` — the Authorization header named a key that is malformed, unknown, or revoked; body is `{ error: { code: 'invalid_api_key' } }`. No `reason` in either body.",
@@ -210,10 +235,10 @@
             }
           },
           "402": {
-            "description": "Tier required: Free-tier callers (`required: 'docs'`), or the requested `markerFormat` is not available on the caller's tier"
+            "description": "Tier required: Free-tier callers (`required: 'plus'`), the requested `markerFormat` is not available on the caller's tier, or `keep` was sent below Pro (`field: 'keep'`, `required: 'pro'`)"
           },
           "413": {
-            "description": "File exceeds the cap for its format (`file_too_large`, with the applicable `limit`), the PDF has more pages than allowed (`too_many_pages`, with `limit` and `actual`), or the extracted text exceeds the tier char limit (`char_limit_exceeded`)"
+            "description": "File exceeds the cap for its format (`file_too_large`, with the applicable `limit`), the file is within that cap but too large or complex to process within the service's memory and time limits (`file_too_large` with `reason: \"LIMIT_EXCEEDED\"` and no `limit`), the PDF has more pages than allowed (`too_many_pages`, with `limit` and `actual`), or the extracted text exceeds the tier char limit (`char_limit_exceeded`)"
           },
           "422": {
             "description": "Password-protected/encrypted document (`encrypted_file`), or a PDF with no text layer — a scan (`no_text_layer`). Neither is retryable, and there is no OCR path."
@@ -222,7 +247,24 @@
             "description": "Rate limit exceeded (shared daily budget with /anonymize)"
           },
           "503": {
-            "description": "Processing at capacity or inference unavailable — retry later"
+            "description": "Overloaded or unavailable. `error: 'server_busy'` (with `Retry-After`, seconds): the service is full right now and turned this upload away before inference - the call and its reserved characters are booked back (the short-window limit keeps counting); retry after the given delay. `code: 'busy'`: file processing at capacity (with `Retry-After`). `error: 'inference_unavailable'`: the model could not be reached; not counted against the quota.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": ["server_busy"]
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["error", "message"]
+                }
+              }
+            }
           }
         }
       }
@@ -259,7 +301,7 @@
           },
           "markerFormat": {
             "type": "string",
-            "enum": ["default", "custom", "xxxxx", "blackbar"]
+            "enum": ["default", "custom", "xxxxx", "blackbar", "pseudonym"]
           },
           "turnstile_token": {
             "type": "string"
@@ -271,9 +313,63 @@
           },
           "customMarkerMap": {
             "type": "object",
-            "additionalProperties": {
-              "type": "string"
+            "properties": {
+              "PERSON": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "EMAIL": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "PHONE": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "ADDRESS": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "DATE": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "URL": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "ACCOUNT": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "SECRET": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "UNKLAR": {
+                "type": "string",
+                "maxLength": 40
+              }
             }
+          },
+          "structure": {
+            "type": "string",
+            "enum": ["auto", "text", "json", "csv"],
+            "default": "auto"
+          },
+          "keep": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["DATE", "URL"]
+            },
+            "maxItems": 2
+          },
+          "applyCustomRules": {
+            "type": "boolean"
+          },
+          "applyAllowlist": {
+            "type": "boolean"
           }
         },
         "required": ["text"]
@@ -312,6 +408,28 @@
                   "type": "number",
                   "minimum": 0,
                   "maximum": 1
+                },
+                "source": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "model",
+                        "rule",
+                        "custom_rule",
+                        "coreference",
+                        "propagation",
+                        "gazetteer",
+                        "anchor"
+                      ]
+                    },
+                    "name": {
+                      "type": "string",
+                      "maxLength": 80
+                    }
+                  },
+                  "required": ["kind"]
                 }
               },
               "required": ["start", "end", "category", "id", "original"]
@@ -345,6 +463,28 @@
                   "type": "number",
                   "minimum": 0,
                   "maximum": 1
+                },
+                "source": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "model",
+                        "rule",
+                        "custom_rule",
+                        "coreference",
+                        "propagation",
+                        "gazetteer",
+                        "anchor"
+                      ]
+                    },
+                    "name": {
+                      "type": "string",
+                      "maxLength": 80
+                    }
+                  },
+                  "required": ["kind"]
                 }
               },
               "required": ["start", "end", "category", "id", "original"]
@@ -363,12 +503,101 @@
               "servedBy": {
                 "type": "string",
                 "enum": ["slow", "fast", "gpu"]
+              },
+              "counts": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "uncertainCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "structure": {
+                "type": "string",
+                "enum": ["text", "json", "csv"]
+              },
+              "kept": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": ["DATE", "URL"]
+                }
               }
             },
-            "required": ["request_id", "processed_chars", "servedBy"]
+            "required": [
+              "request_id",
+              "processed_chars",
+              "servedBy",
+              "counts",
+              "uncertainCount",
+              "structure"
+            ]
+          },
+          "receipt": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "version": {
+                "type": "number",
+                "enum": [1]
+              },
+              "issuedAt": {
+                "type": "string"
+              },
+              "requestId": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              },
+              "processedChars": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "counts": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "uncertainCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "outputSha256": {
+                "type": "string"
+              },
+              "rulesetHash": {
+                "type": "string",
+                "nullable": true
+              },
+              "keyId": {
+                "type": "string"
+              },
+              "signature": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "version",
+              "issuedAt",
+              "requestId",
+              "model",
+              "processedChars",
+              "counts",
+              "uncertainCount",
+              "outputSha256",
+              "rulesetHash",
+              "keyId",
+              "signature"
+            ]
           }
         },
-        "required": ["anonymized", "spans", "uncertainSpans", "stats"]
+        "required": ["anonymized", "spans", "uncertainSpans", "stats", "receipt"]
       },
       "AnonymizeFileResponse": {
         "type": "object",
@@ -416,6 +645,28 @@
                   "type": "number",
                   "minimum": 0,
                   "maximum": 1
+                },
+                "source": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "model",
+                        "rule",
+                        "custom_rule",
+                        "coreference",
+                        "propagation",
+                        "gazetteer",
+                        "anchor"
+                      ]
+                    },
+                    "name": {
+                      "type": "string",
+                      "maxLength": 80
+                    }
+                  },
+                  "required": ["kind"]
                 }
               },
               "required": ["start", "end", "category", "id", "original"]
@@ -449,6 +700,28 @@
                   "type": "number",
                   "minimum": 0,
                   "maximum": 1
+                },
+                "source": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "model",
+                        "rule",
+                        "custom_rule",
+                        "coreference",
+                        "propagation",
+                        "gazetteer",
+                        "anchor"
+                      ]
+                    },
+                    "name": {
+                      "type": "string",
+                      "maxLength": 80
+                    }
+                  },
+                  "required": ["kind"]
                 }
               },
               "required": ["start", "end", "category", "id", "original"]
@@ -480,12 +753,101 @@
               },
               "servedBy": {
                 "type": "string"
+              },
+              "counts": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "uncertainCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "structure": {
+                "type": "string",
+                "enum": ["text", "json", "csv"]
+              },
+              "kept": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": ["DATE", "URL"]
+                }
               }
             },
-            "required": ["request_id", "extractedChars", "servedBy"]
+            "required": [
+              "request_id",
+              "extractedChars",
+              "servedBy",
+              "counts",
+              "uncertainCount",
+              "structure"
+            ]
+          },
+          "receipt": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "version": {
+                "type": "number",
+                "enum": [1]
+              },
+              "issuedAt": {
+                "type": "string"
+              },
+              "requestId": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              },
+              "processedChars": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "counts": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "uncertainCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "outputSha256": {
+                "type": "string"
+              },
+              "rulesetHash": {
+                "type": "string",
+                "nullable": true
+              },
+              "keyId": {
+                "type": "string"
+              },
+              "signature": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "version",
+              "issuedAt",
+              "requestId",
+              "model",
+              "processedChars",
+              "counts",
+              "uncertainCount",
+              "outputSha256",
+              "rulesetHash",
+              "keyId",
+              "signature"
+            ]
           }
         },
-        "required": ["file", "spans", "uncertainSpans", "warnings", "stats"]
+        "required": ["file", "spans", "uncertainSpans", "warnings", "stats", "receipt"]
       },
       "AnonymizeFileTextResponse": {
         "type": "object",
@@ -521,6 +883,28 @@
                   "type": "number",
                   "minimum": 0,
                   "maximum": 1
+                },
+                "source": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "model",
+                        "rule",
+                        "custom_rule",
+                        "coreference",
+                        "propagation",
+                        "gazetteer",
+                        "anchor"
+                      ]
+                    },
+                    "name": {
+                      "type": "string",
+                      "maxLength": 80
+                    }
+                  },
+                  "required": ["kind"]
                 }
               },
               "required": ["start", "end", "category", "id", "original"]
@@ -554,6 +938,28 @@
                   "type": "number",
                   "minimum": 0,
                   "maximum": 1
+                },
+                "source": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "model",
+                        "rule",
+                        "custom_rule",
+                        "coreference",
+                        "propagation",
+                        "gazetteer",
+                        "anchor"
+                      ]
+                    },
+                    "name": {
+                      "type": "string",
+                      "maxLength": 80
+                    }
+                  },
+                  "required": ["kind"]
                 }
               },
               "required": ["start", "end", "category", "id", "original"]
@@ -585,12 +991,101 @@
               },
               "servedBy": {
                 "type": "string"
+              },
+              "counts": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "uncertainCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "structure": {
+                "type": "string",
+                "enum": ["text", "json", "csv"]
+              },
+              "kept": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": ["DATE", "URL"]
+                }
               }
             },
-            "required": ["request_id", "extractedChars", "servedBy"]
+            "required": [
+              "request_id",
+              "extractedChars",
+              "servedBy",
+              "counts",
+              "uncertainCount",
+              "structure"
+            ]
+          },
+          "receipt": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "version": {
+                "type": "number",
+                "enum": [1]
+              },
+              "issuedAt": {
+                "type": "string"
+              },
+              "requestId": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              },
+              "processedChars": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "counts": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "uncertainCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "outputSha256": {
+                "type": "string"
+              },
+              "rulesetHash": {
+                "type": "string",
+                "nullable": true
+              },
+              "keyId": {
+                "type": "string"
+              },
+              "signature": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "version",
+              "issuedAt",
+              "requestId",
+              "model",
+              "processedChars",
+              "counts",
+              "uncertainCount",
+              "outputSha256",
+              "rulesetHash",
+              "keyId",
+              "signature"
+            ]
           }
         },
-        "required": ["text", "spans", "uncertainSpans", "warnings", "stats"]
+        "required": ["text", "spans", "uncertainSpans", "warnings", "stats", "receipt"]
       },
       "LimitsResponse": {
         "type": "object",
@@ -600,7 +1095,7 @@
             "properties": {
               "tier": {
                 "type": "string",
-                "enum": ["anon", "free", "docs", "api", "pro", "ultra"]
+                "enum": ["anon", "free", "plus", "pro", "ultra"]
               },
               "channel": {
                 "type": "string",
@@ -627,10 +1122,7 @@
                   "free": {
                     "type": "integer"
                   },
-                  "docs": {
-                    "type": "integer"
-                  },
-                  "api": {
+                  "plus": {
                     "type": "integer"
                   },
                   "pro": {
@@ -640,7 +1132,7 @@
                     "type": "integer"
                   }
                 },
-                "required": ["anon", "free", "docs", "api", "pro", "ultra"]
+                "required": ["anon", "free", "plus", "pro", "ultra"]
               },
               "api": {
                 "type": "object",
@@ -648,10 +1140,7 @@
                   "free": {
                     "type": "integer"
                   },
-                  "docs": {
-                    "type": "integer"
-                  },
-                  "api": {
+                  "plus": {
                     "type": "integer"
                   },
                   "pro": {
@@ -661,7 +1150,7 @@
                     "type": "integer"
                   }
                 },
-                "required": ["free", "docs", "api", "pro", "ultra"]
+                "required": ["free", "plus", "pro", "ultra"]
               }
             },
             "required": ["web", "api"]

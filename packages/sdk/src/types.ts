@@ -20,16 +20,11 @@ export interface AnonymizeOptions {
   markerFormat?: MarkerFormat;
   ambiguous?: AmbiguousMode;
   /**
-   * Honoured by a later server release (`--keep`). Silently ignored by today's server:
-   * `AnonymizeRequest` is a non-strict zod object, so an unrecognized field is stripped, not
-   * rejected — verified against `schemas.ts` and against the running dev server (2026-09-07:
-   * sending `keep: ["DATE","URL"]` to `POST /api/v1/anonymize` returns 200 with no effect).
+   * Categories to detect but leave as plain text (`DATE`, `URL`; typed loosely, the server validates). Pro and Ultra only: below that
+   * the server answers 402 `tier_required` rather than ignoring the field.
    */
   keep?: string[];
-  /**
-   * Honoured by a later server release (structure-preserving output). Silently ignored by
-   * today's server, same non-strict-object reasoning as `keep` above.
-   */
+  /** `auto` | `text` | `json` | `csv` (typed loosely, the server validates). Below Plus the server forces `text` without an error. */
   structure?: string;
 }
 

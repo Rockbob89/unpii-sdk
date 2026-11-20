@@ -1,5 +1,5 @@
 export { Unpii } from "./client.js";
-export { UnpiiError } from "./errors.js";
+export { UnpiiBusyError, UnpiiError } from "./errors.js";
 export { restore } from "./restore.js";
 export type {
   AnonymizeFileOptions,

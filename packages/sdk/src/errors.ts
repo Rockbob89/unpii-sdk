@@ -18,8 +18,19 @@ export class UnpiiError extends Error {
   readonly status: number;
   readonly code: string | undefined;
   readonly requestId: string | undefined;
+  /**
+   * Seconds from a `Retry-After` response header (503 `server_busy`, 429 `custom_rules_busy`,
+   * ...), or `undefined` when the header was absent or not a plain non-negative integer. The
+   * HTTP-date form is deliberately not parsed: the server only ever sends seconds.
+   */
+  readonly retryAfterSeconds: number | undefined;
 
-  constructor(status: number, code: string | undefined, requestId: string | undefined) {
+  constructor(
+    status: number,
+    code: string | undefined,
+    requestId: string | undefined,
+    retryAfterSeconds?: number,
+  ) {
     const safeCode = code !== undefined && CODE_PATTERN.test(code) ? code : undefined;
     const message =
       safeCode !== undefined ? `unpii: ${safeCode} (HTTP ${status})` : `unpii: HTTP ${status}`;
@@ -28,5 +39,27 @@ export class UnpiiError extends Error {
     this.status = status;
     this.code = safeCode;
     this.requestId = requestId;
+    this.retryAfterSeconds = retryAfterSeconds;
   }
+}
+
+/**
+ * Thrown for 503 `server_busy`: the service is full right now and refused the request before
+ * doing any work. It is "try again later", not a fault in the request and not an outage -
+ * deliberately a different type from `inference_unavailable` (model unreachable), which stays a
+ * plain `UnpiiError`. The SDK never retries by itself: whether and when to try again is the
+ * caller's decision, `retryAfterSeconds` is the server's hint for it.
+ */
+export class UnpiiBusyError extends UnpiiError {
+  constructor(status: number, requestId: string | undefined, retryAfterSeconds?: number) {
+    super(status, "server_busy", requestId, retryAfterSeconds);
+    this.name = "UnpiiBusyError";
+  }
+}
+
+/** Parses a `Retry-After` value: digits only, at most 6 of them (about 11 days); anything else
+ * is `undefined`. */
+export function parseRetryAfter(value: string | null): number | undefined {
+  if (value === null || !/^\d{1,6}$/.test(value.trim())) return undefined;
+  return Number(value.trim());
 }

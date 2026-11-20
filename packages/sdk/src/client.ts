@@ -1,4 +1,4 @@
-import { UnpiiError } from "./errors.js";
+import { UnpiiBusyError, UnpiiError, parseRetryAfter } from "./errors.js";
 import type {
   AnonymizeFileResponse,
   AnonymizeFileTextResponse,
@@ -37,10 +37,16 @@ async function safeReadJson(res: Response): Promise<unknown> {
  * plain string (Fastify's default 404/405 envelope) instead of `{ code, message, ... }`, and
  * `body.error.code` may be missing or non-string. Every one of those returns `undefined` here;
  * `UnpiiError`'s own constructor is what actually validates the shape of a real code.
+ *
+ * One string `error` IS a code: the overload gate answers `{ error: "server_busy", message }`
+ * (and the model-unreachable 503 `{ error: "inference_unavailable", ... }`), `error` being a
+ * string there. It is returned as a candidate too; Fastify's own strings ("Not Found") never
+ * pass `UnpiiError`'s lowercase-snake_case check, so they still end up as no code.
  */
 function extractErrorCode(body: unknown): string | undefined {
   if (typeof body !== "object" || body === null) return undefined;
   const bodyError = (body as { error?: unknown }).error;
+  if (typeof bodyError === "string") return bodyError;
   if (typeof bodyError !== "object" || bodyError === null) return undefined;
   const code = (bodyError as { code?: unknown }).code;
   return typeof code === "string" ? code : undefined;
@@ -76,7 +82,11 @@ export class Unpii {
     const body = await safeReadJson(res);
     const code = extractErrorCode(body);
     const requestId = res.headers.get("x-request-id") ?? undefined;
-    return new UnpiiError(res.status, code, requestId);
+    const retryAfter = parseRetryAfter(res.headers.get("retry-after"));
+    if (res.status === 503 && code === "server_busy") {
+      return new UnpiiBusyError(res.status, requestId, retryAfter);
+    }
+    return new UnpiiError(res.status, code, requestId, retryAfter);
   }
 
   /** Shared request path: adds auth, checks `res.ok`, throws `UnpiiError` otherwise, and
