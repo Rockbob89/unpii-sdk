@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Unpii } from "../src/client.js";
-import { UnpiiError } from "../src/errors.js";
+import { UnpiiBusyError, UnpiiError } from "../src/errors.js";
 
 function fixture(name: string): string {
   return readFileSync(fileURLToPath(new URL(`../../../fixtures/${name}`, import.meta.url)), "utf8");
@@ -266,13 +266,107 @@ describe("Unpii client", () => {
     });
   });
 
+  // 503 `server_busy` is the overload gate's refusal. Its body is `{ error: "server_busy",
+  // message }` - `error` is a STRING, like Fastify's own envelope, so the old object-only
+  // extraction read it as "no code". The shape is derived from the server source
+  // (`replyServerBusy`) and the contract's 503 entry, not a
+  // recording: the overload gate is not on production yet (see fixtures/README.md).
+  describe("503 server_busy", () => {
+    const BUSY_BODY = JSON.stringify({
+      error: "server_busy",
+      message: "The service is busy right now. Please retry in a few seconds.",
+    });
+
+    it("throws UnpiiBusyError with code and Retry-After seconds", async () => {
+      const { fetch: fx } = fakeFetch([jsonResponse(BUSY_BODY, 503, { "Retry-After": "7" })]);
+      const client = new Unpii({ apiKey: "k", fetch: fx });
+
+      const err = await client.anonymize("x").catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(UnpiiBusyError);
+      expect(err).toBeInstanceOf(UnpiiError);
+      expect(err).toMatchObject({ status: 503, code: "server_busy", retryAfterSeconds: 7 });
+      expect((err as UnpiiError).message).toBe("unpii: server_busy (HTTP 503)");
+    });
+
+    it("does not retry on its own: one call, one request", async () => {
+      const { fetch: fx, calls } = fakeFetch([
+        jsonResponse(BUSY_BODY, 503, { "Retry-After": "1" }),
+      ]);
+      const client = new Unpii({ apiKey: "k", fetch: fx });
+
+      await expect(client.anonymize("x")).rejects.toBeInstanceOf(UnpiiBusyError);
+      expect(calls).toHaveLength(1);
+    });
+
+    it("applies to anonymizeFile() too", async () => {
+      const { fetch: fx } = fakeFetch([jsonResponse(BUSY_BODY, 503, { "Retry-After": "3" })]);
+      const client = new Unpii({ apiKey: "k", fetch: fx });
+
+      await expect(
+        client.anonymizeFile(new Uint8Array([1]), { filename: "a.docx" }),
+      ).rejects.toMatchObject({ code: "server_busy", retryAfterSeconds: 3 });
+    });
+
+    it("leaves retryAfterSeconds undefined for a missing, non-numeric or absurd header", async () => {
+      for (const header of [
+        undefined,
+        "soon",
+        "-5",
+        "1.5",
+        "Wed, 21 Oct 2026 07:28:00 GMT",
+        "9999999999",
+      ]) {
+        const { fetch: fx } = fakeFetch([
+          jsonResponse(
+            BUSY_BODY,
+            503,
+            header === undefined ? undefined : { "Retry-After": header },
+          ),
+        ]);
+        const client = new Unpii({ apiKey: "k", fetch: fx });
+        const err = (await client.anonymize("x").catch((e: unknown) => e)) as UnpiiError;
+        expect(err, String(header)).toBeInstanceOf(UnpiiBusyError);
+        expect(err.retryAfterSeconds, String(header)).toBeUndefined();
+      }
+    });
+
+    it("keeps inference_unavailable (string-shaped error) a plain UnpiiError, not a busy one", async () => {
+      const body = JSON.stringify({ error: "inference_unavailable", message: "x" });
+      const { fetch: fx } = fakeFetch([jsonResponse(body, 503, { "Retry-After": "30" })]);
+      const client = new Unpii({ apiKey: "k", fetch: fx });
+
+      const err = await client.anonymize("x").catch((e: unknown) => e);
+      expect(err).not.toBeInstanceOf(UnpiiBusyError);
+      expect(err).toMatchObject({
+        status: 503,
+        code: "inference_unavailable",
+        retryAfterSeconds: 30,
+      });
+    });
+
+    it("still reads Fastify's Title Case string error as no code", async () => {
+      const { fetch: fx } = fakeFetch([jsonResponse(fixture("error.route-not-found.json"), 404)]);
+      const client = new Unpii({ apiKey: "k", fetch: fx });
+
+      await expect(client.scan("x")).rejects.toMatchObject({ status: 404, code: undefined });
+    });
+
+    it("never puts the response message into the error", async () => {
+      const { fetch: fx } = fakeFetch([jsonResponse(BUSY_BODY, 503, { "Retry-After": "1" })]);
+      const client = new Unpii({ apiKey: "k", fetch: fx });
+
+      const err = (await client.anonymize("x").catch((e: unknown) => e)) as UnpiiError;
+      expect(err.message).not.toContain("busy right now");
+    });
+  });
+
   describe("limits()", () => {
     it("GETs /api/v1/limits", async () => {
       const body = JSON.stringify({
-        current: { tier: "docs", channel: "api", daily_limit: 100, entitled: true },
+        current: { tier: "plus", channel: "api", daily_limit: 100, entitled: true },
         reference: {
-          web: { anon: 1, free: 2, docs: 3, api: 4, pro: 5, ultra: 6 },
-          api: { free: 1, docs: 2, api: 3, pro: 4, ultra: 5 },
+          web: { anon: 1, free: 2, plus: 3, pro: 5, ultra: 6 },
+          api: { free: 1, plus: 2, pro: 4, ultra: 5 },
         },
         burst: { magic_link_per_hour: 5 },
         anonymize: { anonymous_per_day: 1, user_per_day: 2, apikey_per_day: 3 },
@@ -285,7 +379,7 @@ describe("Unpii client", () => {
 
       expect(calls[0]?.init.method).toBe("GET");
       expect(calls[0]?.url).toBe("https://unpii.me/api/v1/limits");
-      expect(result.current.tier).toBe("docs");
+      expect(result.current.tier).toBe("plus");
     });
   });
 });

@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from email.message import Message
 from typing import Any
 
-from .errors import UnpiiError
+from .errors import UnpiiBusyError, UnpiiError, parse_retry_after
 
 _DEFAULT_BASE_URL = "https://unpii.me"
 _DEFAULT_TIMEOUT = 120.0
@@ -181,15 +181,16 @@ class Unpii:
         marker_format: str | None = None,
         ambiguous: str | None = None,
         keep: list[str] | None = None,
-        structure: bool | None = None,
+        structure: str | None = None,
     ) -> AnonymizeResult:
         """POST /api/v1/anonymize.
 
-        `keep` and `structure` are accepted and sent, but honoured only by a
-        later server release — today's server silently strips both (verified
-        2026-09-07 by sending them and getting a 200 with unchanged
-        behavior). They're already part of this signature so callers pinning
-        an SDK version don't need a breaking bump once the server catches up.
+        `keep` (`["DATE"]`, `["URL"]` or both) leaves those categories as
+        plain text and needs a Pro or Ultra plan - below that the server
+        answers 402 `tier_required`. `structure` (`"auto"`, `"text"`, `"json"`,
+        `"csv"`) preserves JSON/CSV formatting from the Plus plan upward and is
+        quietly treated as `"text"` below it. (Earlier versions typed
+        `structure` as a bool, which the server never accepted.)
         """
         body: dict[str, Any] = {"text": text}
         if marker_format is not None:
@@ -365,7 +366,13 @@ class Unpii:
         request_id = resp_headers.get("x-request-id") if resp_headers is not None else None
 
         if not (200 <= status < 300):
-            raise UnpiiError(status, _extract_error_code(resp_body), request_id)
+            code = _extract_error_code(resp_body)
+            retry_after = parse_retry_after(
+                resp_headers.get("retry-after") if resp_headers is not None else None
+            )
+            if status == 503 and code == "server_busy":
+                raise UnpiiBusyError(status, request_id, retry_after)
+            raise UnpiiError(status, code, request_id, retry_after)
 
         if not resp_body:
             return {}
@@ -379,7 +386,8 @@ def _extract_error_code(resp_body: bytes) -> str | None:
     """Pull `error.code` out of an error response body, tolerating every
     shape it might come in: our own `{"error": {"code": ...}}`, Fastify's
     default `{"error": "Not Found", ...}` (a STRING, not an object — see
-    `fixtures/error.route-not-found.json`), non-JSON bytes, and
+    `fixtures/error.route-not-found.json`; a lowercase-snake_case string is
+    kept as a candidate code, see below), non-JSON bytes, and
     an empty body. Anything that doesn't fit hands back `None`; `UnpiiError`
     itself does the final validation against the code-shape regex."""
     if not resp_body:
@@ -391,6 +399,11 @@ def _extract_error_code(resp_body: bytes) -> str | None:
     if not isinstance(parsed, dict):
         return None
     error = parsed.get("error")
+    if isinstance(error, str):
+        # The overload gate answers `{"error": "server_busy", ...}` - a string,
+        # like Fastify's envelope. Fastify's own strings ("Not Found") fail
+        # UnpiiError's lowercase-snake_case check and still end up as no code.
+        return error
     if not isinstance(error, dict):
         return None
     code = error.get("code")

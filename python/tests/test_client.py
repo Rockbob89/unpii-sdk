@@ -23,7 +23,7 @@ from typing import Any
 import pytest
 
 from unpii_sdk.client import Unpii
-from unpii_sdk.errors import UnpiiError
+from unpii_sdk.errors import UnpiiBusyError, UnpiiError
 
 FIXTURES_DIR = Path(__file__).resolve().parent.parent.parent / "fixtures"
 PYPROJECT_PATH = Path(__file__).resolve().parent.parent / "pyproject.toml"
@@ -165,7 +165,7 @@ def test_anonymize_all_optional_fields_sent(server: _StubServer) -> None:
     client = Unpii(api_key=API_KEY, base_url=server.base_url)
 
     client.anonymize(
-        "text", marker_format="custom", ambiguous="mark", keep=["DATE", "URL"], structure=True
+        "text", marker_format="custom", ambiguous="mark", keep=["DATE", "URL"], structure="json"
     )
 
     body = json.loads(server.received[0].body)
@@ -174,7 +174,7 @@ def test_anonymize_all_optional_fields_sent(server: _StubServer) -> None:
         "markerFormat": "custom",
         "ambiguous": "mark",
         "keep": ["DATE", "URL"],
-        "structure": True,
+        "structure": "json",
     }
 
 
@@ -261,7 +261,7 @@ def test_anonymize_file_omits_optional_fields_when_not_given(server: _StubServer
 
 
 def test_limits_returns_parsed_dict_verbatim(server: _StubServer) -> None:
-    payload = {"current": {"tier": "docs"}, "reference": {"web": {}}, "burst": {}}
+    payload = {"current": {"tier": "plus"}, "reference": {"web": {}}, "burst": {}}
     server.queue(
         "GET", "/api/v1/limits", _Stub(200, json.dumps(payload).encode("utf-8"))
     )
@@ -343,6 +343,78 @@ def test_error_message_never_contains_body_or_input(server: _StubServer) -> None
     assert secret_input not in text
     assert body_message not in text
     assert "boom" in text  # the validated code IS allowed in the message
+
+
+# --- 503 server_busy (overload gate) ----------------------------------
+# Body shape derived from the server source (`replyServerBusy`) and the contract's 503 entry,
+# not a recording: the overload gate is not on production yet (fixtures/README.md).
+
+_BUSY_BODY = json.dumps(
+    {
+        "error": "server_busy",
+        "message": "The service is busy right now. Please retry in a few seconds.",
+    }
+).encode("utf-8")
+
+
+def test_503_server_busy_raises_busy_error_with_retry_after(server: _StubServer) -> None:
+    server.queue("POST", "/api/v1/anonymize", _Stub(503, _BUSY_BODY, {"Retry-After": "7"}))
+    client = Unpii(api_key=API_KEY, base_url=server.base_url)
+
+    with pytest.raises(UnpiiBusyError) as exc_info:
+        client.anonymize("text")
+
+    err = exc_info.value
+    assert isinstance(err, UnpiiError)
+    assert (err.status, err.code, err.retry_after) == (503, "server_busy", 7)
+    assert str(err) == "unpii: server_busy (HTTP 503)"
+    assert "busy right now" not in str(err)
+
+
+def test_503_server_busy_does_not_retry_on_its_own(server: _StubServer) -> None:
+    server.queue("POST", "/api/v1/anonymize", _Stub(503, _BUSY_BODY, {"Retry-After": "1"}))
+    client = Unpii(api_key=API_KEY, base_url=server.base_url)
+
+    with pytest.raises(UnpiiBusyError):
+        client.anonymize("text")
+
+    assert len(server.received) == 1
+
+
+def test_503_server_busy_on_anonymize_file(server: _StubServer) -> None:
+    server.queue("POST", "/api/v1/anonymize-file", _Stub(503, _BUSY_BODY, {"Retry-After": "3"}))
+    client = Unpii(api_key=API_KEY, base_url=server.base_url)
+
+    with pytest.raises(UnpiiBusyError) as exc_info:
+        client.anonymize_file(b"PK", filename="a.docx")
+
+    assert exc_info.value.retry_after == 3
+
+
+@pytest.mark.parametrize(
+    "header", [None, "soon", "-5", "1.5", "Wed, 21 Oct 2026 07:28:00 GMT", "9999999999"]
+)
+def test_retry_after_is_none_unless_plain_seconds(server: _StubServer, header: str | None) -> None:
+    headers = {} if header is None else {"Retry-After": header}
+    server.queue("POST", "/api/v1/anonymize", _Stub(503, _BUSY_BODY, headers))
+    client = Unpii(api_key=API_KEY, base_url=server.base_url)
+
+    with pytest.raises(UnpiiBusyError) as exc_info:
+        client.anonymize("text")
+
+    assert exc_info.value.retry_after is None
+
+
+def test_inference_unavailable_is_not_a_busy_error(server: _StubServer) -> None:
+    body = json.dumps({"error": "inference_unavailable", "message": "x"}).encode("utf-8")
+    server.queue("POST", "/api/v1/anonymize", _Stub(503, body, {"Retry-After": "30"}))
+    client = Unpii(api_key=API_KEY, base_url=server.base_url)
+
+    with pytest.raises(UnpiiError) as exc_info:
+        client.anonymize("text")
+
+    assert not isinstance(exc_info.value, UnpiiBusyError)
+    assert (exc_info.value.code, exc_info.value.retry_after) == ("inference_unavailable", 30)
 
 
 # --- request_id from x-request-id header -----------------------------

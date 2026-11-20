@@ -18,7 +18,7 @@ from .client import (
     Span,
     Unpii,
 )
-from .errors import UnpiiError
+from .errors import UnpiiBusyError, UnpiiError
 from .restore import RestoreResult, restore
 
 __all__ = [
@@ -31,6 +31,7 @@ __all__ = [
     "ScanResult",
     "Span",
     "Unpii",
+    "UnpiiBusyError",
     "UnpiiError",
     "restore",
 ]

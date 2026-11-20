@@ -82,8 +82,11 @@ which is how the test suite runs without a network.
   way a redaction is structural rather than a list of places someone had to remember.
 - `limits()` - your plan's daily limits and what the other plans allow.
 
-`keep` and `structure` are accepted by the SDK today and are honoured by a later server release;
-the current server ignores fields it does not know, so passing them costs nothing.
+`keep` (`["DATE"]`, `["URL"]` or both) leaves those categories as plain text and needs a Pro or
+Ultra plan; below that the server answers 402 `tier_required`. `structure` (`auto`, `text`,
+`json`, `csv`) preserves JSON/CSV formatting from the Plus plan upward and is quietly treated as
+`text` below it. `markerFormat: "pseudonym"` (Pro and Ultra, text only, not for files) replaces
+names and addresses with invented ones.
 
 ## Errors
 
@@ -94,13 +97,46 @@ class UnpiiError extends Error {
   status: number;            // HTTP status
   code: string | undefined;  // e.g. "tier_required"
   requestId: string | undefined;
+  retryAfterSeconds: number | undefined;  // from the Retry-After header, when it is plain seconds
 }
 ```
+
+**A busy server is its own type.** When the service is full it answers 503 `server_busy` with
+a `Retry-After` header and has done no work yet; the SDK throws `UnpiiBusyError` (a subclass of
+`UnpiiError`, `code === "server_busy"`). The SDK does not retry for you - waiting and trying
+again is your call, `retryAfterSeconds` is the server's hint:
+
+```ts
+try {
+  await client.anonymize(text);
+} catch (err) {
+  if (err instanceof UnpiiBusyError) {
+    await sleep((err.retryAfterSeconds ?? 5) * 1000); // then try once more, or give up
+  } else throw err;
+}
+```
+
+A different 503, `inference_unavailable`, means the model could not be reached and stays a
+plain `UnpiiError`.
 
 **The message never contains the response body and never contains your input.** It is built from
 the code and the status, nothing else. That is not politeness: an error message ends up in logs,
 in issue trackers and in screenshots, and this SDK exists to keep personal data out of exactly
 those places.
+
+## Upgrading to 0.2.0
+
+- **Plan keys.** `docs` and `api` are one plan now, `plus`. In `limits()`, `current.tier` and the
+  keys of `reference.web` / `reference.api` read `anon | free | plus | pro | ultra`. Code that
+  reads `reference.web.docs` or compares `tier === "api"` needs updating.
+- **New response fields.** Anonymize responses carry `stats.counts`, `stats.uncertainCount`,
+  `stats.structure` and `receipt` (nullable), and spans may carry `source`. The generated types
+  declare them as present because that is the server's contract; a server that has not been
+  updated yet does not send them, so read them defensively until it has.
+- **`UnpiiBusyError`** is a subclass of `UnpiiError`: an existing `catch` / `instanceof
+  UnpiiError` keeps catching it.
+- `markerFormat: "pseudonym"` exists now (text only); `keep` and `structure` are evaluated by the
+  server instead of ignored.
 
 ## What this package does not do
 
